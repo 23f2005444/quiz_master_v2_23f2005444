@@ -2,40 +2,84 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token
 from controllers.models import User, Admin
 from controllers.extensions import db
+from datetime import datetime
 
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    data = request.json
-    if not all(k in data for k in ('email', 'password', 'full_name', 'qualification', 'date_of_birth')):
-        return jsonify({'msg': 'Missing fields'}), 400
-    if User.query.filter_by(email=data['email']).first():
-        return jsonify({'msg': 'Email already registered'}), 400
-    user = User(
-        email=data['email'],
-        full_name=data['full_name'],
-        qualification=data['qualification'],
-        date_of_birth=data['date_of_birth']
-    )
-    user.password = data['password']
-    db.session.add(user)
-    db.session.commit()
-    return jsonify({'msg': 'User registered successfully'}), 201
+    try:
+        data = request.json
+        
+        # Validate required fields
+        required_fields = ['email', 'password', 'full_name', 'qualification', 'date_of_birth']
+        if not all(field in data for field in required_fields):
+            return jsonify({'msg': 'Missing required fields'}), 400
+
+        if User.query.filter_by(email=data['email']).first():
+            return jsonify({'msg': 'Email already registered'}), 400
+
+        try:
+            date_of_birth = datetime.strptime(data['date_of_birth'], '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'msg': 'Invalid date format. Use YYYY-MM-DD'}), 400
+
+        # Create new user
+        user = User(
+            email=data['email'],
+            full_name=data['full_name'],
+            qualification=data['qualification'],
+            date_of_birth=date_of_birth
+        )
+        user.password = data['password']
+
+        db.session.add(user)
+        db.session.commit()
+
+        return jsonify({
+            'msg': 'User registered successfully',
+            'user': {
+                'email': user.email,
+                'full_name': user.full_name
+            }
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'msg': f'Registration failed: {str(e)}'}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.json
     role = data.get('role', 'user')
+    
     if role == 'admin':
         admin = Admin.query.filter_by(username=data.get('username')).first()
         if admin and admin.verify_password(data.get('password')):
-            token = create_access_token(identity={'id': admin.id, 'role': 'admin'})
-            return jsonify(access_token=token, role='admin'), 200
+            token = create_access_token(identity=str(admin.id))
+            return jsonify({
+                'access_token': token,
+                'role': 'admin',
+                'user': {
+                    'id': admin.id,
+                    'username': admin.username,
+                    'role': 'admin'
+                }
+            }), 200
         return jsonify({'msg': 'Invalid admin credentials'}), 401
     else:
         user = User.query.filter_by(email=data.get('email')).first()
         if user and user.verify_password(data.get('password')):
-            token = create_access_token(identity={'id': user.id, 'role': 'user'})
-            return jsonify(access_token=token, role='user'), 200
+            # CRITICAL FIX: User identity must be string ID, not a dict
+            token = create_access_token(identity=str(user.id))
+            return jsonify({
+                'access_token': token,
+                'role': 'user',
+                'user': {
+                    'id': user.id,
+                    'email': user.email,
+                    'full_name': user.full_name,
+                    'role': 'user'
+                }
+            }), 200
         return jsonify({'msg': 'Invalid user credentials'}), 401

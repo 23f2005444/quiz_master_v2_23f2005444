@@ -4,5 +4,37 @@
       "@/*": ["./src/*"]
     }
   },
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/components/AdminDashboard.vue",
+    "src/components/admin/AdminDashboard.vue",
+    "src/components/admin/AdminNavbar.vue",
+    "src/components/admin/AdminSidebar.vue",
+    "src/components/admin/ChapterManager.vue",
+    "src/components/admin/QuestionManager.vue",
+    "src/components/admin/QuizManager.vue",
+    "src/components/admin/SubjectManager.vue",
+    "src/components/admin/UserList.vue",
+    "src/components/ChapterForm.vue",
+    "src/components/ChapterList.vue",
+    "src/components/QuestionForm.vue",
+    "src/components/QuestionList.vue",
+    "src/components/QuizForm.vue",
+    "src/components/QuizList.vue",
+    "src/components/SubjectForm.vue",
+    "src/components/SubjectList.vue",
+    "src/components/UserList.vue",
+    "src/components/HelloWorld.vue",
+    "src/components/TheWelcome.vue",
+    "src/components/WelcomeItem.vue",
+    "src/components/admin/DashboardOverview.vue",
+    "src/views/AboutView.vue",
+    "src/views/HomeView.vue",
+    "src/views/admin/ChapterManagement.vue",
+    "src/views/admin/QuestionManagement.vue",
+    "src/views/admin/QuizManagement.vue",
+    "src/views/admin/SubjectsManagement.vue",
+    "src/views/admin/UserManagement.vue"
+  ]
 }
