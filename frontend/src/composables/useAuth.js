@@ -1,42 +1,144 @@
 import { ref, computed } from 'vue'
 import { authService } from '@/services/auth'
+import axios from 'axios'
 
-const user = ref(null)
-const loading = ref(true)
+const API_URL = 'http://localhost:5000/api'
 
 export function useAuth() {
-  const isAuthenticated = computed(() => !!user.value)
-  const isAdmin = computed(() => user.value?.role === 'admin')
-  const isUser = computed(() => user.value?.role === 'user')
+  // Reactive state for user info and loading status
+  const userData = ref(null)
+  const loading = ref(false)
+  const error = ref(null)
 
+  // Load user data from localStorage on creation
+  const loadUserData = () => {
+    const storedUser = authService.getCurrentUser()
+    if (storedUser) {
+      userData.value = storedUser
+    }
+    return userData.value
+  }
+  
+  // Initialize or reload user data
+  loadUserData()
+
+  // Computed properties based on auth state
+  const user = computed(() => userData.value || {})
+  
+  const isAuthenticated = computed(() => {
+    return authService.isAuthenticated()
+  })
+  
+  const role = computed(() => {
+    return authService.getRole()
+  })
+
+  // Initialize auth - called from App.vue
   const initAuth = async () => {
     loading.value = true
-    const userData = authService.getCurrentUser()
-    if (userData) {
-      user.value = userData
+    try {
+      // First check if we have a token
+      const token = authService.getToken()
+      if (!token) {
+        console.log('No authentication token found')
+        loading.value = false
+        return false
+      }
+
+      console.log('Token found, validating...')
+
+      // Then verify it's valid
+      const isValid = await validateToken()
+      console.log('Token validation result:', isValid)
+      
+      if (!isValid) {
+        console.log('Token validation failed, logging out')
+        authService.logout()
+        loading.value = false
+        return false
+      }
+
+      // Make sure we have user data
+      loadUserData()
+      console.log('Auth initialized successfully')
+      return true
+    } catch (e) {
+      console.error('Error initializing auth:', e)
+      return false
+    } finally {
+      loading.value = false
     }
-    loading.value = false
   }
 
+  // Validate the current token
+  const validateToken = async () => {
+    try {
+      // Try to validate token with server first
+      const token = authService.getToken()
+      if (!token) return false
+
+      // Send request to validation endpoint
+      try {
+        await axios.get(`${API_URL}/auth/validate`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        return true
+      } catch (err) {
+        console.log('Server token validation failed:', err.message)
+        
+        // Fallback to client-side validation
+        return authService.isTokenValid()
+      }
+    } catch (e) {
+      console.error('Token validation error:', e)
+      return false
+    }
+  }
+
+  // Login method
   const login = async (credentials) => {
-    const response = await authService.login(credentials)
-    user.value = response.user
-    return response
+    loading.value = true
+    error.value = null
+    
+    try {
+      const response = await authService.login(credentials)
+      userData.value = response.user
+      return response
+    } catch (e) {
+      error.value = e.response?.data?.message || 'Login failed'
+      throw e
+    } finally {
+      loading.value = false
+    }
   }
 
+  // Logout method
   const logout = () => {
     authService.logout()
-    user.value = null
+    userData.value = null
+  }
+
+  // Get user ID helper
+  const getUserId = () => {
+    return userData.value?.id
+  }
+
+  // Update user data
+  const updateUserData = (newData) => {
+    userData.value = { ...userData.value, ...newData }
+    authService.updateUserData(userData.value)
   }
 
   return {
     user,
-    loading,
     isAuthenticated,
-    isAdmin,
-    isUser,
+    role,
+    loading,
+    error,
     initAuth,
     login,
-    logout
+    logout,
+    getUserId,
+    updateUserData
   }
 }

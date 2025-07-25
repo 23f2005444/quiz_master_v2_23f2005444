@@ -18,6 +18,7 @@
 
               <!-- Alert for errors -->
               <div v-if="error" class="alert alert-danger" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
                 {{ error }}
               </div>
 
@@ -25,38 +26,51 @@
               <form @submit.prevent="handleRegister" class="needs-validation" novalidate>
                 <!-- Email -->
                 <div class="mb-3">
-                  <label class="form-label">Email address</label>
+                  <label for="email" class="form-label">Email address</label>
                   <input 
                     type="email" 
                     class="form-control"
+                    id="email"
                     v-model="formData.email"
                     required
                     placeholder="Enter your email"
+                    autocomplete="email"
                   >
+                  <div class="invalid-feedback">
+                    Please provide a valid email address.
+                  </div>
                 </div>
 
                 <!-- Full Name -->
                 <div class="mb-3">
-                  <label class="form-label">Full Name</label>
+                  <label for="fullName" class="form-label">Full Name</label>
                   <input 
                     type="text" 
                     class="form-control"
+                    id="fullName"
                     v-model="formData.full_name"
                     required
                     placeholder="Enter your full name"
+                    autocomplete="name"
                   >
+                  <div class="invalid-feedback">
+                    Please provide your full name.
+                  </div>
                 </div>
 
                 <!-- Password -->
                 <div class="mb-3">
-                  <label class="form-label">Password</label>
+                  <label for="password" class="form-label">Password</label>
                   <div class="input-group">
                     <input 
                       :type="showPassword ? 'text' : 'password'"
                       class="form-control"
+                      id="password"
                       v-model="formData.password"
                       required
                       placeholder="Create a password"
+                      autocomplete="new-password"
+                      minlength="8"
                     >
                     <button 
                       class="btn btn-outline-secondary" 
@@ -66,29 +80,41 @@
                       <i class="bi" :class="showPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
                     </button>
                   </div>
+                  <div class="form-text text-muted">
+                    Password must be at least 8 characters long.
+                  </div>
                 </div>
 
                 <!-- Qualification -->
                 <div class="mb-3">
-                  <label class="form-label">Qualification</label>
+                  <label for="qualification" class="form-label">Qualification</label>
                   <input 
                     type="text" 
                     class="form-control"
+                    id="qualification"
                     v-model="formData.qualification"
                     required
                     placeholder="Enter your qualification"
                   >
+                  <div class="invalid-feedback">
+                    Please provide your qualification.
+                  </div>
                 </div>
 
                 <!-- Date of Birth -->
                 <div class="mb-4">
-                  <label class="form-label">Date of Birth</label>
+                  <label for="dob" class="form-label">Date of Birth</label>
                   <input 
                     type="date" 
                     class="form-control"
+                    id="dob"
                     v-model="formData.date_of_birth"
                     required
+                    autocomplete="bday"
                   >
+                  <div class="invalid-feedback">
+                    Please provide your date of birth.
+                  </div>
                 </div>
 
                 <!-- Submit Button -->
@@ -97,7 +123,7 @@
                   class="btn btn-primary w-100"
                   :disabled="loading"
                 >
-                  <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
+                  <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
                   Create Account
                 </button>
               </form>
@@ -139,13 +165,49 @@ const togglePassword = () => {
 
 const handleRegister = async () => {
   try {
+    // Form validation
+    const form = document.querySelector('form')
+    if (!form.checkValidity()) {
+      form.classList.add('was-validated')
+      return
+    }
+    
     loading.value = true
     error.value = ''
     
+    // Ensure date is in the correct format
+    if (!formData.date_of_birth) {
+      error.value = 'Please enter your date of birth'
+      return
+    }
+    
+    // Password validation
+    if (formData.password.length < 8) {
+      error.value = 'Password must be at least 8 characters long'
+      return
+    }
+    
+    console.log('Submitting registration data:', { ...formData, password: '[HIDDEN]' })
+    
+    // Send registration request
     await authService.register(formData)
-    router.push('/login')
+    
+    // If registration was successful, show success message and redirect
+    router.push({
+      path: '/login',
+      query: { registered: 'success' }
+    })
   } catch (err) {
-    error.value = err.response?.data?.msg || 'An error occurred during registration'
+    console.error('Registration error:', err)
+    
+    if (err.response) {
+      console.error('Error response:', err.response.data)
+      error.value = err.response?.data?.msg || 'Registration failed. Please try again.'
+    } else if (err.request) {
+      error.value = 'Network error. Please check your internet connection.'
+    } else {
+      error.value = 'An error occurred during registration'
+    }
   } finally {
     loading.value = false
   }
@@ -177,5 +239,10 @@ const handleRegister = async () => {
 .form-control:focus {
   box-shadow: none;
   border-color: var(--bs-primary);
+}
+
+/* Add subtle shadow effect on form controls when focused */
+.form-control:focus {
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
 }
 </style>

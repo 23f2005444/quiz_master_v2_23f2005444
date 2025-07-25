@@ -109,3 +109,46 @@ class Score(db.Model):
 
     user = db.relationship('User', backref='scores', lazy=True)
     quiz = db.relationship('Quiz', backref='scores', lazy=True)
+
+class QuizAttempt(db.Model):
+    """Model for storing quiz attempts by users"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'), nullable=False)
+    
+    # Quiz scores
+    score = db.Column(db.Integer, nullable=True)  # Null until attempt is submitted
+    total_marks = db.Column(db.Integer, nullable=True)  # Null until attempt is submitted
+    score_percentage = db.Column(db.Float, nullable=True)  # Null until attempt is submitted
+    
+    # Timing information
+    start_time = db.Column(db.DateTime, nullable=False, default=db.func.now())
+    end_time = db.Column(db.DateTime, nullable=True)  # Null until attempt is submitted
+    time_taken = db.Column(db.Integer, nullable=True)  # Minutes taken, null until submitted
+    
+    # Status of the attempt
+    status = db.Column(db.String(20), nullable=False, default='in_progress')  # 'in_progress', 'completed', 'expired'
+    is_passed = db.Column(db.Boolean, nullable=True)  # Null until attempt is submitted
+    
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
+
+    # Relationships
+    user = db.relationship('User', backref='quiz_attempts')
+    quiz = db.relationship('Quiz', backref='attempts')
+    responses = db.relationship('QuizResponse', backref='attempt', cascade='all, delete-orphan')
+
+class QuizResponse(db.Model):
+    """Model for storing individual question responses in a quiz attempt"""
+    id = db.Column(db.Integer, primary_key=True)
+    attempt_id = db.Column(db.Integer, db.ForeignKey('quiz_attempt.id'), nullable=False)
+    question_id = db.Column(db.Integer, db.ForeignKey('question.id'), nullable=False)
+    selected_option = db.Column(db.Integer, nullable=True)  # Can be null if not answered
+    is_correct = db.Column(db.Boolean, nullable=True)  # Null until attempt is submitted
+    score = db.Column(db.Integer, nullable=True)  # Changed from marks_obtained to score
+    
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
+
+    # Relationships
+    question = db.relationship('Question', backref='responses')

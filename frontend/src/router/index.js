@@ -3,14 +3,25 @@ import { authService } from '@/services/auth'
 import HomePage from '../views/HomePage.vue'
 import LoginPage from '../views/LoginPage.vue'
 import RegisterPage from '../views/RegisterPage.vue'
-import UserDashboard from '../views/user/UserDashboard.vue'
+import NotFound from '@/views/NotFound.vue'
+
+// Admin Views
 import AdminDashboard from '../views/admin/AdminDashboard.vue'
 import SubjectManager from '../views/admin/SubjectManager.vue'
 import ChapterManager from '../views/admin/ChapterManager.vue'
 import QuizManager from '../views/admin/QuizManager.vue'
 import QuestionManager from '../views/admin/QuestionManager.vue'
 import UserManager from '../views/admin/UserManager.vue'
-import NotFound from '@/views/NotFound.vue'
+
+// User Views 
+import UserDashboard from '../views/user/UserDashboard.vue'
+import SubjectsList from '../views/user/SubjectsList.vue'
+import SubjectDetail from '../views/user/SubjectDetail.vue'
+import ChapterQuizzes from '../views/user/ChapterQuizzes.vue'
+import QuizView from '../views/user/QuizView.vue'
+import QuizAttempt from '../views/user/QuizAttempt.vue'
+import QuizResult from '../views/user/QuizResult.vue'
+import QuizAttemptList from '../views/user/QuizAttemptList.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -89,9 +100,72 @@ const router = createRouter({
     },
     // User Routes
     {
-      path: '/dashboard/user',
+      path: '/dashboard',
       name: 'userDashboard',
       component: UserDashboard,
+      meta: { 
+        requiresAuth: true,
+        role: 'user'
+      }
+    },
+    {
+      path: '/subjects',
+      name: 'subjects',
+      component: SubjectsList,
+      meta: { 
+        requiresAuth: true,
+        role: 'user'
+      }
+    },
+    {
+      path: '/subjects/:id',
+      name: 'subjectDetail',
+      component: SubjectDetail,
+      meta: { 
+        requiresAuth: true,
+        role: 'user'
+      }
+    },
+    {
+      path: '/chapters/:id/quizzes',
+      name: 'chapterQuizzes',
+      component: ChapterQuizzes,
+      meta: { 
+        requiresAuth: true,
+        role: 'user'
+      }
+    },
+    {
+      path: '/quizzes/:id',
+      name: 'quizView',
+      component: QuizView,
+      meta: { 
+        requiresAuth: true,
+        role: 'user'
+      }
+    },
+    {
+      path: '/attempts/:id/take',
+      name: 'quizAttempt',
+      component: QuizAttempt,
+      meta: { 
+        requiresAuth: true,
+        role: 'user'
+      }
+    },
+    {
+      path: '/attempts/:id',
+      name: 'quizResult',
+      component: QuizResult,
+      meta: { 
+        requiresAuth: true,
+        role: 'user'
+      }
+    },
+    {
+      path: '/attempts',
+      name: 'quizAttempts',
+      component: QuizAttemptList,
       meta: { 
         requiresAuth: true,
         role: 'user'
@@ -123,7 +197,7 @@ router.beforeEach((to, from, next) => {
 
   // Route is for guests only
   if (to.meta.guest && isAuthenticated) {
-    return next(userRole === 'admin' ? '/admin' : '/dashboard/user')
+    return next(userRole === 'admin' ? '/admin' : '/dashboard')
   }
 
   next()

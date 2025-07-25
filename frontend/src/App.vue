@@ -1,12 +1,28 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { RouterView } from 'vue-router'
+import { RouterView, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
-const { loading, initAuth } = useAuth()
+const router = useRouter()
+const auth = useAuth()
+const loading = ref(true)
 
-onMounted(() => {
-  initAuth()
+onMounted(async () => {
+  console.log('App mounted, initializing auth...')
+  
+  try {
+    // Initialize auth state
+    await auth.initAuth()
+    
+    console.log('Auth state initialized:', {
+      isAuthenticated: auth.isAuthenticated.value,
+      role: auth.role.value
+    })
+  } catch (error) {
+    console.error('Auth initialization error:', error)
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 

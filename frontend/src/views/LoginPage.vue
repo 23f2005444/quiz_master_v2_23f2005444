@@ -116,14 +116,17 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { authService } from '@/services/auth'
+import axios from 'axios'
 
 const router = useRouter()
+const route = useRoute()
 const error = ref('')
 const loading = ref(false)
 const showPassword = ref(false)
+const serverStatus = ref('unknown') // 'unknown', 'online', 'offline'
 
 const formData = reactive({
   role: 'user',
@@ -131,8 +134,44 @@ const formData = reactive({
   password: ''
 })
 
+onMounted(async () => {
+  // Check if user was redirected due to session expiry
+  if (route.query.reason === 'session_expired') {
+    error.value = 'Your session has expired. Please log in again.'
+  }
+  
+  // Check if server is running
+  checkServerStatus()
+})
+
+const checkServerStatus = async () => {
+  try {
+    // Simple ping to check if backend is available
+    await axios.get('http://localhost:5000/api/auth/ping', { timeout: 3000 })
+    serverStatus.value = 'online'
+  } catch (err) {
+    if (err.code === 'ERR_NETWORK' || !err.response) {
+      serverStatus.value = 'offline'
+      error.value = 'Cannot connect to server. Please ensure the backend is running.'
+    } else {
+      // Server is up but returned an error
+      serverStatus.value = 'online'
+    }
+  }
+}
+
+const togglePassword = () => {
+  showPassword.value = !showPassword.value
+}
+
 const handleLogin = async () => {
   try {
+    if (serverStatus.value === 'offline') {
+      error.value = 'Cannot connect to server. Please ensure the backend is running.'
+      await checkServerStatus()
+      return
+    }
+    
     loading.value = true
     error.value = ''
     
@@ -147,18 +186,27 @@ const handleLogin = async () => {
       credentials.email = formData.username
     }
 
+    console.log('Attempting login with:', { ...credentials, password: '[HIDDEN]' })
+    
     // Use the auth service to login
     const response = await authService.login(credentials)
+    console.log('Login successful, response:', response)
     
     // Redirect based on role
     if (response.role === 'admin') {
       router.push('/admin')
     } else {
-      router.push('/dashboard/user')
+      router.push('/dashboard')
     }
   } catch (err) {
     console.error('Login error:', err)
-    error.value = err.response?.data?.msg || 'An error occurred during login'
+    
+    if (err.code === 'ERR_NETWORK' || !err.response) {
+      error.value = 'Cannot connect to server. Please ensure the backend is running.'
+      serverStatus.value = 'offline'
+    } else {
+      error.value = err.response?.data?.msg || 'An error occurred during login'
+    }
   } finally {
     loading.value = false
   }

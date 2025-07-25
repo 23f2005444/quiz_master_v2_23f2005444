@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from controllers.models import User, Admin
 from controllers.extensions import db
-from datetime import datetime
+from datetime import datetime, timedelta
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -56,7 +56,12 @@ def login():
     if role == 'admin':
         admin = Admin.query.filter_by(username=data.get('username')).first()
         if admin and admin.verify_password(data.get('password')):
-            token = create_access_token(identity=str(admin.id))
+            # Create token with 24 hour expiry
+            token = create_access_token(
+                identity=str(admin.id), 
+                additional_claims={'role': 'admin'},
+                expires_delta=timedelta(hours=24)
+            )
             return jsonify({
                 'access_token': token,
                 'role': 'admin',
@@ -70,8 +75,12 @@ def login():
     else:
         user = User.query.filter_by(email=data.get('email')).first()
         if user and user.verify_password(data.get('password')):
-            # CRITICAL FIX: User identity must be string ID, not a dict
-            token = create_access_token(identity=str(user.id))
+            # Create token with 24 hour expiry
+            token = create_access_token(
+                identity=str(user.id), 
+                additional_claims={'role': 'user'},
+                expires_delta=timedelta(hours=24)
+            )
             return jsonify({
                 'access_token': token,
                 'role': 'user',
@@ -83,3 +92,16 @@ def login():
                 }
             }), 200
         return jsonify({'msg': 'Invalid user credentials'}), 401
+
+# Add a validation endpoint
+@auth_bp.route('/validate', methods=['GET'])
+@jwt_required()
+def validate_token():
+    # If JWT is valid, this endpoint will be accessible
+    # Get the user ID from the token
+    user_id = get_jwt_identity()
+    
+    return jsonify({
+        'valid': True,
+        'user_id': user_id
+    })
