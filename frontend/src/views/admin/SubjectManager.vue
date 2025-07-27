@@ -225,6 +225,13 @@
           </div>
           <div class="modal-body">
             <p>Are you sure you want to delete subject "<strong>{{ subjectToDelete?.name }}</strong>"?</p>
+            <p class="text-warning mb-1">⚠️ This will also delete:</p>
+            <ul class="text-warning mb-2">
+              <li>All chapters in this subject</li>
+              <li>All quizzes in those chapters</li>
+              <li>All questions in those quizzes</li>
+              <li>All quiz attempts and scores</li>
+            </ul>
             <p class="text-danger mb-0">This action cannot be undone.</p>
           </div>
           <div class="modal-footer">
@@ -450,11 +457,7 @@ const deleteSubject = async () => {
     }
   } catch (error) {
     console.error('Error deleting subject:', error);
-    if (error.response?.status === 400) {
-      alert('Cannot delete subject with existing chapters');
-    } else {
-      alert('Failed to delete subject. Please try again.');
-    }
+    alert('Failed to delete subject. Please try again.');
   } finally {
     isDeleting.value = false;
   }

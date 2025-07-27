@@ -50,8 +50,9 @@ class Subject(db.Model):
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
     is_active = db.Column(db.Boolean, default=True)
 
-    chapter = db.relationship('Chapter', backref='subject', lazy=True)
-    creator  = db.relationship('Admin', backref='created_subjects')
+    # Updated relationship with cascade delete
+    chapter = db.relationship('Chapter', backref='subject', lazy=True, cascade='all, delete-orphan')
+    creator = db.relationship('Admin', backref='created_subjects')
 
 class Chapter(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -64,8 +65,9 @@ class Chapter(db.Model):
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
     is_active = db.Column(db.Boolean, default=True)
 
-    quiz = db.relationship('Quiz', backref='chapter', lazy=True)
-    creator  = db.relationship('Admin', backref='created_chapters')
+    # Updated relationship with cascade delete
+    quiz = db.relationship('Quiz', backref='chapter', lazy=True, cascade='all, delete-orphan')
+    creator = db.relationship('Admin', backref='created_chapters')
 
 class Quiz(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -81,8 +83,12 @@ class Quiz(db.Model):
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
     is_active = db.Column(db.Boolean, default=True)
 
-    question = db.relationship('Question', backref='quiz', lazy=True)
-    creator  = db.relationship('Admin', backref='created_quizzes')
+    # Updated relationships with cascade delete
+    question = db.relationship('Question', backref='quiz', lazy=True, cascade='all, delete-orphan')
+    creator = db.relationship('Admin', backref='created_quizzes')
+    # Add cascade for quiz attempts and scores
+    attempts = db.relationship('QuizAttempt', backref='quiz', cascade='all, delete-orphan')
+    scores = db.relationship('Score', backref='quiz', cascade='all, delete-orphan')
 
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -98,7 +104,9 @@ class Question(db.Model):
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
 
-    creator  = db.relationship('Admin', backref='created_questions')
+    creator = db.relationship('Admin', backref='created_questions')
+    # Add cascade for question responses
+    responses = db.relationship('QuizResponse', backref='question', cascade='all, delete-orphan')
 
 class Score(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -108,7 +116,6 @@ class Score(db.Model):
     date = db.Column(db.DateTime, default=db.func.now())
 
     user = db.relationship('User', backref='scores', lazy=True)
-    quiz = db.relationship('Quiz', backref='scores', lazy=True)
 
 class QuizAttempt(db.Model):
     """Model for storing quiz attempts by users"""
@@ -133,9 +140,8 @@ class QuizAttempt(db.Model):
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
 
-    # Relationships
+    # Relationships with cascade delete
     user = db.relationship('User', backref='quiz_attempts')
-    quiz = db.relationship('Quiz', backref='attempts')
     responses = db.relationship('QuizResponse', backref='attempt', cascade='all, delete-orphan')
 
 class QuizResponse(db.Model):
@@ -149,6 +155,3 @@ class QuizResponse(db.Model):
     
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
-
-    # Relationships
-    question = db.relationship('Question', backref='responses')

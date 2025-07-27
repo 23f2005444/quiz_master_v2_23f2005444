@@ -161,11 +161,6 @@ def delete_subject(subject_id):
     try:
         subject = Subject.query.get_or_404(subject_id)
         
-        # Check if subject has chapters
-        chapters = Chapter.query.filter_by(subject_id=subject_id).first()
-        if chapters:
-            return jsonify({"msg": "Cannot delete subject with existing chapters"}), 400
-        
         db.session.delete(subject)
         db.session.commit()
         
@@ -288,11 +283,6 @@ def update_chapter(chapter_id):
 def delete_chapter(chapter_id):
     try:
         chapter = Chapter.query.get_or_404(chapter_id)
-        
-        # Check if chapter has quizzes
-        quizzes = Quiz.query.filter_by(chapter_id=chapter_id).first()
-        if quizzes:
-            return jsonify({"msg": "Cannot delete chapter with existing quizzes"}), 400
         
         db.session.delete(chapter)
         db.session.commit()
@@ -514,11 +504,6 @@ def update_quiz(quiz_id):
 def delete_quiz(quiz_id):
     try:
         quiz = Quiz.query.get_or_404(quiz_id)
-        
-        # Check if quiz has questions
-        questions = Question.query.filter_by(quiz_id=quiz_id).first()
-        if questions:
-            return jsonify({"msg": "Cannot delete quiz with existing questions"}), 400
         
         db.session.delete(quiz)
         db.session.commit()

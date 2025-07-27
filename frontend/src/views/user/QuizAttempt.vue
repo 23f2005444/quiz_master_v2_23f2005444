@@ -1,3 +1,282 @@
+<script setup>
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useApi } from '@/composables/useApi'
+import * as bootstrap from 'bootstrap'
+
+const api = useApi()
+const route = useRoute()
+const router = useRouter()
+const attemptId = parseInt(route.params.id)
+
+const loading = ref(true)
+const quiz = ref({})
+const chapter = ref({})
+const subject = ref({})
+const questions = ref([])
+const userAnswers = ref([])
+const currentQuestionIndex = ref(0)
+const timeLeft = ref(0)
+const submitting = ref(false)
+const confirmSubmit = ref(false)
+const timeUp = ref(false)
+const startTime = ref(new Date())
+let timer = null
+
+// Modal refs
+const submitModalRef = ref(null)
+const timeUpModalRef = ref(null)
+let submitModal = null
+let timeUpModal = null
+
+// Computed properties
+const currentQuestion = computed(() => {
+  return questions.value[currentQuestionIndex.value] || {}
+})
+
+const answeredCount = computed(() => {
+  return userAnswers.value.filter(answer => answer !== null && answer !== undefined).length
+})
+
+const unansweredCount = computed(() => {
+  return questions.value.length - answeredCount.value
+})
+
+const answeredPercentage = computed(() => {
+  if (questions.value.length === 0) return 0
+  return (answeredCount.value / questions.value.length) * 100
+})
+
+const progress = computed(() => {
+  if (questions.value.length === 0) return 0
+  return ((currentQuestionIndex.value + 1) / questions.value.length) * 100
+})
+
+const progressColorClass = computed(() => {
+  if (progress.value < 33) return 'bg-danger'
+  if (progress.value < 66) return 'bg-warning'
+  return 'bg-success'
+})
+
+// Watch for confirmSubmit changes
+watch(confirmSubmit, (newVal) => {
+  if (newVal && submitModal) {
+    submitModal.show()
+  } else if (!newVal && submitModal) {
+    submitModal.hide()
+  }
+})
+
+// Watch for timeUp changes
+watch(timeUp, (newVal) => {
+  if (newVal && timeUpModal) {
+    timeUpModal.show()
+    submitQuiz()
+  }
+})
+
+// Methods
+const selectOption = (optionNumber) => {
+  // Create a new array to ensure reactivity
+  const newAnswers = [...userAnswers.value]
+  newAnswers[currentQuestionIndex.value] = optionNumber
+  userAnswers.value = newAnswers
+}
+
+const previousQuestion = () => {
+  if (currentQuestionIndex.value > 0) {
+    currentQuestionIndex.value--
+  }
+}
+
+const nextQuestion = () => {
+  if (currentQuestionIndex.value < questions.value.length - 1) {
+    currentQuestionIndex.value++
+  }
+}
+
+const goToQuestion = (index) => {
+  currentQuestionIndex.value = index
+}
+
+const submitQuiz = async () => {
+  if (submitting.value) return
+  submitting.value = true
+  
+  try {
+    // Calculate time taken
+    const endTime = new Date()
+    const timeTakenMs = endTime - startTime.value
+    const timeTakenMinutes = Math.ceil(timeTakenMs / (1000 * 60))
+    
+    // Prepare answers in the format expected by the API
+    const answers = userAnswers.value.map((answer, index) => {
+      return {
+        question_id: questions.value[index].id,
+        selected_option: answer || 0 // Use 0 for unanswered questions
+      }
+    })
+    
+    // Submit the quiz
+    await api.put(`/attempts/${attemptId}/submit`, {
+      answers,
+      time_taken: timeTakenMinutes
+    })
+    
+    // Clear the timer
+    clearInterval(timer)
+    
+    // Hide all modals before redirecting
+    hideAllModals()
+    
+    // Add a small delay to ensure modals are properly hidden
+    setTimeout(() => {
+      // Redirect to the result page
+      router.push(`/attempts/${attemptId}`)
+    }, 100)
+    
+  } catch (error) {
+    console.error('Error submitting quiz:', error)
+    // Hide modals on error too
+    hideAllModals()
+    
+    // Show more detailed error information
+    if (error.response) {
+      console.error('Response data:', error.response.data)
+      alert(`Failed to submit quiz: ${error.response.data.error || 'Unknown error'}`)
+    } else {
+      alert('Failed to submit quiz. Please try again.')
+    }
+    submitting.value = false
+    confirmSubmit.value = false
+  }
+}
+
+const hideAllModals = () => {
+  try {
+    // Hide submit modal
+    if (submitModal) {
+      submitModal.hide()
+    }
+    
+    // Hide time up modal
+    if (timeUpModal) {
+      timeUpModal.hide()
+    }
+    
+    // Force remove all modal backdrops
+    const backdrops = document.querySelectorAll('.modal-backdrop')
+    backdrops.forEach(backdrop => {
+      if (backdrop.parentNode) {
+        backdrop.parentNode.removeChild(backdrop)
+      }
+    })
+    
+    // Remove modal-open class from body
+    document.body.classList.remove('modal-open')
+    
+    // Reset body styles
+    document.body.style.overflow = ''
+    document.body.style.paddingRight = ''
+    
+  } catch (error) {
+    console.error('Error hiding modals:', error)
+  }
+}
+
+const startTimer = () => {
+  timer = setInterval(() => {
+    if (timeLeft.value <= 0) {
+      clearInterval(timer)
+      timeUp.value = true
+    } else {
+      timeLeft.value -= 1
+    }
+  }, 1000)
+}
+
+const formatTime = (seconds) => {
+  const minutes = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+}
+
+// Lifecycle hooks
+onMounted(async () => {
+  try {
+    // Initialize modals with proper event handlers
+    if (submitModalRef.value) {
+      submitModal = new bootstrap.Modal(submitModalRef.value, {
+        backdrop: 'static',
+        keyboard: false
+      })
+      
+      // Add event listener for modal hidden event
+      submitModalRef.value.addEventListener('hidden.bs.modal', () => {
+        confirmSubmit.value = false
+      })
+    }
+    
+    if (timeUpModalRef.value) {
+      timeUpModal = new bootstrap.Modal(timeUpModalRef.value, {
+        backdrop: 'static',
+        keyboard: false
+      })
+    }
+    
+    // Load attempt details
+    const attemptResponse = await api.get(`/attempts/${attemptId}`)
+    const attempt = attemptResponse.data
+    
+    // Check if attempt is already completed
+    if (attempt.status === 'completed') {
+      router.push(`/attempts/${attemptId}`)
+      return
+    }
+    
+    // Load quiz details
+    const quizResponse = await api.get(`/quizzes/${attempt.quiz_id}`)
+    quiz.value = quizResponse.data
+    
+    // Set time left
+    timeLeft.value = quiz.value.time_duration * 60
+    
+    // Load chapter details
+    const chapterResponse = await api.get(`/chapters/${quiz.value.chapter_id}`)
+    chapter.value = chapterResponse.data
+    
+    // Load subject details
+    const subjectResponse = await api.get(`/subjects/${chapter.value.subject_id}`)
+    subject.value = subjectResponse.data
+    
+    // Load questions
+    const questionsResponse = await api.get(`/attempts/${attemptId}/questions`)
+    questions.value = questionsResponse.data
+    
+    // Initialize user answers array
+    userAnswers.value = new Array(questions.value.length).fill(null)
+    
+    // Start the timer
+    startTimer()
+  } catch (error) {
+    console.error('Error loading quiz:', error)
+    loading.value = false
+  } finally {
+    loading.value = false
+  }
+})
+
+// Clean up before component unmount
+onUnmounted(() => {
+  if (timer) {
+    clearInterval(timer)
+  }
+  
+  // Ensure all modals are properly cleaned up
+  hideAllModals()
+})
+</script>
+
 <template>
   <div class="quiz-attempt">
     <div class="quiz-header bg-white shadow-sm py-2 py-md-3">
@@ -278,229 +557,7 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useApi } from '@/composables/useApi'
-import * as bootstrap from 'bootstrap'
-
-const api = useApi()
-const route = useRoute()
-const router = useRouter()
-const attemptId = parseInt(route.params.id)
-
-const loading = ref(true)
-const quiz = ref({})
-const chapter = ref({})
-const subject = ref({})
-const questions = ref([])
-const userAnswers = ref([])
-const currentQuestionIndex = ref(0)
-const timeLeft = ref(0)
-const submitting = ref(false)
-const confirmSubmit = ref(false)
-const timeUp = ref(false)
-const startTime = ref(new Date())
-let timer = null
-
-// Modal refs
-const submitModalRef = ref(null)
-const timeUpModalRef = ref(null)
-let submitModal = null
-let timeUpModal = null
-
-// Computed properties
-const currentQuestion = computed(() => {
-  return questions.value[currentQuestionIndex.value] || {}
-})
-
-const answeredCount = computed(() => {
-  return userAnswers.value.filter(answer => answer !== null && answer !== undefined).length
-})
-
-const unansweredCount = computed(() => {
-  return questions.value.length - answeredCount.value
-})
-
-const answeredPercentage = computed(() => {
-  if (questions.value.length === 0) return 0
-  return (answeredCount.value / questions.value.length) * 100
-})
-
-const progress = computed(() => {
-  if (questions.value.length === 0) return 0
-  return ((currentQuestionIndex.value + 1) / questions.value.length) * 100
-})
-
-const progressColorClass = computed(() => {
-  if (progress.value < 33) return 'bg-danger'
-  if (progress.value < 66) return 'bg-warning'
-  return 'bg-success'
-})
-
-// Watch for confirmSubmit changes
-watch(confirmSubmit, (newVal) => {
-  if (newVal && submitModal) {
-    submitModal.show()
-  } else if (!newVal && submitModal) {
-    submitModal.hide()
-  }
-})
-
-// Watch for timeUp changes
-watch(timeUp, (newVal) => {
-  if (newVal && timeUpModal) {
-    timeUpModal.show()
-    submitQuiz()
-  }
-})
-
-// Methods
-const selectOption = (optionNumber) => {
-  // Create a new array to ensure reactivity
-  const newAnswers = [...userAnswers.value]
-  newAnswers[currentQuestionIndex.value] = optionNumber
-  userAnswers.value = newAnswers
-}
-
-const previousQuestion = () => {
-  if (currentQuestionIndex.value > 0) {
-    currentQuestionIndex.value--
-  }
-}
-
-const nextQuestion = () => {
-  if (currentQuestionIndex.value < questions.value.length - 1) {
-    currentQuestionIndex.value++
-  }
-}
-
-const goToQuestion = (index) => {
-  currentQuestionIndex.value = index
-}
-
-const submitQuiz = async () => {
-  if (submitting.value) return
-  submitting.value = true
-  
-  try {
-    // Calculate time taken
-    const endTime = new Date()
-    const timeTakenMs = endTime - startTime.value
-    const timeTakenMinutes = Math.ceil(timeTakenMs / (1000 * 60))
-    
-    // Prepare answers in the format expected by the API
-    const answers = userAnswers.value.map((answer, index) => {
-      return {
-        question_id: questions.value[index].id,
-        selected_option: answer || 0 // Use 0 for unanswered questions
-      }
-    })
-    
-    // Submit the quiz
-    await api.put(`/attempts/${attemptId}/submit`, {
-      answers,
-      time_taken: timeTakenMinutes
-    })
-    
-    // Clear the timer
-    clearInterval(timer)
-    
-    // Redirect to the result page
-    router.push(`/attempts/${attemptId}`)
-  } catch (error) {
-    console.error('Error submitting quiz:', error)
-    // Show more detailed error information
-    if (error.response) {
-      console.error('Response data:', error.response.data)
-      alert(`Failed to submit quiz: ${error.response.data.error || 'Unknown error'}`)
-    } else {
-      alert('Failed to submit quiz. Please try again.')
-    }
-    submitting.value = false
-    confirmSubmit.value = false
-  }
-}
-
-const startTimer = () => {
-  timer = setInterval(() => {
-    if (timeLeft.value <= 0) {
-      clearInterval(timer)
-      timeUp.value = true
-    } else {
-      timeLeft.value -= 1
-    }
-  }, 1000)
-}
-
-const formatTime = (seconds) => {
-  const minutes = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-}
-
-// Lifecycle hooks
-onMounted(async () => {
-  try {
-    // Initialize modals
-    if (submitModalRef.value) {
-      submitModal = new bootstrap.Modal(submitModalRef.value)
-    }
-    
-    if (timeUpModalRef.value) {
-      timeUpModal = new bootstrap.Modal(timeUpModalRef.value)
-    }
-    
-    // Load attempt details
-    const attemptResponse = await api.get(`/attempts/${attemptId}`)
-    const attempt = attemptResponse.data
-    
-    // Check if attempt is already completed
-    if (attempt.status === 'completed') {
-      router.push(`/attempts/${attemptId}`)
-      return
-    }
-    
-    // Load quiz details
-    const quizResponse = await api.get(`/quizzes/${attempt.quiz_id}`)
-    quiz.value = quizResponse.data
-    
-    // Set time left
-    timeLeft.value = quiz.value.time_duration * 60
-    
-    // Load chapter details
-    const chapterResponse = await api.get(`/chapters/${quiz.value.chapter_id}`)
-    chapter.value = chapterResponse.data
-    
-    // Load subject details
-    const subjectResponse = await api.get(`/subjects/${chapter.value.subject_id}`)
-    subject.value = subjectResponse.data
-    
-    // Load questions
-    const questionsResponse = await api.get(`/attempts/${attemptId}/questions`)
-    questions.value = questionsResponse.data
-    
-    // Initialize user answers array
-    userAnswers.value = new Array(questions.value.length).fill(null)
-    
-    // Start the timer
-    startTimer()
-  } catch (error) {
-    console.error('Error loading quiz:', error)
-    loading.value = false
-  } finally {
-    loading.value = false
-  }
-})
-
-// Clean up before component unmount
-onUnmounted(() => {
-  if (timer) {
-    clearInterval(timer)
-  }
-})
-</script>
-
+<!-- The styles remain the same -->
 <style scoped>
 .quiz-attempt {
   min-height: 100vh;

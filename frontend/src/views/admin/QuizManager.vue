@@ -302,6 +302,11 @@
           </div>
           <div class="modal-body">
             <p>Are you sure you want to delete quiz "<strong>{{ quizToDelete?.title }}</strong>"?</p>
+            <p class="text-warning mb-1">⚠️ This will also delete:</p>
+            <ul class="text-warning mb-2">
+              <li>All questions in this quiz</li>
+              <li>All quiz attempts and scores</li>
+            </ul>
             <p class="text-danger mb-0">This action cannot be undone.</p>
           </div>
           <div class="modal-footer">
@@ -570,11 +575,7 @@ const deleteQuiz = async () => {
     }
   } catch (error) {
     console.error('Error deleting quiz:', error)
-    if (error.response?.status === 400) {
-      alert('Cannot delete quiz with existing questions')
-    } else {
-      alert('Failed to delete quiz. Please try again.')
-    }
+    alert('Failed to delete quiz. Please try again.')
   } finally {
     isDeleting.value = false
   }
