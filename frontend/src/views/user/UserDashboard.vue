@@ -76,7 +76,6 @@ onMounted(async () => {
     // Load dashboard data
     await loadDashboardData()
   } catch (err) {
-    console.error('Error loading dashboard data:', err)
     error.value = 'Failed to load dashboard data. Please try again.'
   } finally {
     loading.value = false
@@ -92,7 +91,6 @@ const loadDashboardData = async () => {
       loadSubjects()
     ])
   } catch (err) {
-    console.error('Error in loadDashboardData:', err)
     throw err
   }
 }
@@ -103,7 +101,6 @@ const loadStats = async () => {
     const response = await api.get('/user/dashboard')
     stats.value = response.data
   } catch (err) {
-    console.error('Error loading stats:', err)
   }
 }
 
@@ -112,7 +109,7 @@ const loadRecentAttempts = async () => {
     const response = await api.get('/user/attempts/recent')
     recentAttempts.value = response.data || []
   } catch (err) {
-    console.error('Error loading recent attempts:', err)
+
     recentAttempts.value = []
   }
 }
@@ -122,7 +119,6 @@ const loadRecentQuizzes = async () => {
     const response = await api.get('/user/quizzes/available')
     recentQuizzes.value = response.data || []
   } catch (err) {
-    console.error('Error loading recent quizzes:', err)
     recentQuizzes.value = []
   }
 }
@@ -136,7 +132,6 @@ const loadSubjects = async () => {
     const response = await api.get('/subjects/details')
     availableSubjects.value = response.data || []
   } catch (err) {
-    console.error('Error loading subjects:', err)
     availableSubjects.value = []
   }
 }

@@ -5,7 +5,6 @@ const API_URL = 'http://localhost:5000/api'
 export const authService = {
   async login(credentials) {
     try {
-      console.log('Starting login request to:', `${API_URL}/auth/login`)
       
       const response = await axios.post(`${API_URL}/auth/login`, credentials, {
         timeout: 5000 // 5-second timeout
@@ -19,18 +18,14 @@ export const authService = {
         localStorage.setItem('userData', JSON.stringify(response.data.user))
         localStorage.setItem('loginTime', Date.now()) // Add this for session tracking
         
-        console.log('Authentication successful, token received')
       } else {
-        console.error('No token received in login response')
         throw new Error('No authentication token received')
       }
       
       return response.data
     } catch (error) {
-      console.error('Login error:', error)
       
       if (error.code === 'ERR_NETWORK') {
-        console.error('Network error - backend might be down')
       }
       
       throw error
@@ -42,7 +37,6 @@ export const authService = {
     localStorage.removeItem('userRole')
     localStorage.removeItem('userData')
     localStorage.removeItem('loginTime')
-    console.log('User logged out')
   },
   
   getCurrentUser() {
@@ -50,7 +44,6 @@ export const authService = {
     try {
       return userData ? JSON.parse(userData) : null
     } catch (e) {
-      console.error('Error parsing user data from storage:', e)
       return null
     }
   },
@@ -89,7 +82,6 @@ export const authService = {
       const currentTime = Date.now() / 1000
       return payload.exp > currentTime
     } catch (e) {
-      console.error('Error checking token validity:', e)
       return false
     }
   },
@@ -97,10 +89,8 @@ export const authService = {
   async register(userData) {
     try {
       const response = await axios.post(`${API_URL}/auth/register`, userData)
-      console.log('Registration successful:', response.data)
       return response.data
     } catch (error) {
-      console.error('Registration error:', error.response?.data || error.message)
       throw error
     }
   },
@@ -117,7 +107,6 @@ export const authService = {
       
       return response.data?.valid === true
     } catch (error) {
-      console.error('Token validation error:', error)
       return false
     }
   }

@@ -351,22 +351,17 @@ const startQuiz = async () => {
       return
     }
     
-    console.log('Starting quiz attempt for quiz ID:', quizId)
     const response = await api.post(`/quizzes/${quizId}/attempts`)
-    console.log('Quiz attempt response:', response.data)
     
     const attemptId = response.data.id
     
     // Verify that we got a valid attempt ID before redirecting
     if (!attemptId || isNaN(attemptId)) {
-      console.error('Invalid attempt ID received:', response.data)
       throw new Error('Invalid attempt ID returned from server')
     }
     
-    console.log('Redirecting to attempt ID:', attemptId)
     router.push(`/attempts/${attemptId}/take`)
   } catch (error) {
-    console.error('Error starting quiz:', error)
     if (error.response?.data?.error) {
       alert(error.response.data.error)
     } else if (error.message.includes('backend server')) {

@@ -171,38 +171,28 @@ onMounted(async () => {
   try {
     // Debug token
     const token = localStorage.getItem('token')
-    console.log('Token exists:', !!token)
     
     if (token) {
       try {
-        // Decode the token payload
         const base64Url = token.split('.')[1]
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
         const payload = JSON.parse(window.atob(base64))
-        console.log('Token payload:', payload)
         
-        // Test token endpoint
         const testResponse = await api.get('/admin/debug-token')
-        console.log('Token test response:', testResponse.data)
       } catch (e) {
-        console.error('Error decoding token:', e)
       }
     }
     
-    // Load dashboard stats
     const dashboardResponse = await api.get('/admin/dashboard')
     stats.value = dashboardResponse.data
 
-    // Load recent subjects
     const subjectsResponse = await api.get('/admin/subjects')
     recentSubjects.value = subjectsResponse.data.slice(0, 5)
 
-    // Load recent users
     const usersResponse = await api.get('/admin/users')
     recentUsers.value = usersResponse.data.slice(0, 5)
 
   } catch (error) {
-    console.error('Error loading dashboard data:', error)
   } finally {
     loading.value = false
   }

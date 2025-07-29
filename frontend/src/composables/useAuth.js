@@ -40,19 +40,15 @@ export function useAuth() {
       // First check if we have a token
       const token = authService.getToken()
       if (!token) {
-        console.log('No authentication token found')
         loading.value = false
         return false
       }
 
-      console.log('Token found, validating...')
 
       // Then verify it's valid
       const isValid = await validateToken()
-      console.log('Token validation result:', isValid)
       
       if (!isValid) {
-        console.log('Token validation failed, logging out')
         authService.logout()
         loading.value = false
         return false
@@ -60,10 +56,8 @@ export function useAuth() {
 
       // Make sure we have user data
       loadUserData()
-      console.log('Auth initialized successfully')
       return true
     } catch (e) {
-      console.error('Error initializing auth:', e)
       return false
     } finally {
       loading.value = false
@@ -84,13 +78,11 @@ export function useAuth() {
         })
         return true
       } catch (err) {
-        console.log('Server token validation failed:', err.message)
         
         // Fallback to client-side validation
         return authService.isTokenValid()
       }
     } catch (e) {
-      console.error('Token validation error:', e)
       return false
     }
   }

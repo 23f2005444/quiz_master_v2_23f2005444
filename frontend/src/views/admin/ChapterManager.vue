@@ -455,7 +455,6 @@ const saveChapter = async () => {
       }
     }
   } catch (error) {
-    console.error('Error saving chapter:', error)
     alert('Failed to save chapter. Please try again.')
   } finally {
     isSubmitting.value = false
@@ -498,7 +497,6 @@ const deleteChapter = async () => {
       }
     }
   } catch (error) {
-    console.error('Error deleting chapter:', error)
     alert('Failed to delete chapter. Please try again.')
   } finally {
     isDeleting.value = false

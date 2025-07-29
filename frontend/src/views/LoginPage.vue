@@ -186,11 +186,9 @@ const handleLogin = async () => {
       credentials.email = formData.username
     }
 
-    console.log('Attempting login with:', { ...credentials, password: '[HIDDEN]' })
     
     // Use the auth service to login
     const response = await authService.login(credentials)
-    console.log('Login successful, response:', response)
     
     // Redirect based on role
     if (response.role === 'admin') {

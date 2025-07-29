@@ -8,7 +8,6 @@ const auth = useAuth()
 const loading = ref(true)
 
 onMounted(async () => {
-  console.log('App mounted, initializing auth...')
   
   try {
     // Initialize auth state

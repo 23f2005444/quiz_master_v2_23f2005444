@@ -33,21 +33,16 @@ apiClient.interceptors.response.use(
   },
   error => {
     if (error.code === 'ECONNABORTED') {
-      console.error('Request timeout - server might be down')
     } else if (error.code === 'ERR_NETWORK' || !error.response) {
-      console.error('Network error - backend server might not be running')
-      // Don't redirect to login on network errors - this breaks the UX
       return Promise.reject(new Error('Backend server is not responding. Please check if it\'s running.'))
     }
     
     // Special handling for CORS errors
     if (error.message && error.message.includes('Network Error')) {
-      console.error('CORS Error: The API server might not be configured to accept requests from this origin.')
     }
     
     // Handle 401 unauthorized (expired token)
     if (error.response?.status === 401) {
-      console.log('Unauthorized request - logging out user')
       authService.logout()
       // Use window.location to force a full page reload
       window.location.href = '/login?reason=session_expired'

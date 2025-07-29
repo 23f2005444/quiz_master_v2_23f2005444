@@ -603,7 +603,6 @@ const saveQuiz = async () => {
       is_active: Boolean(quizForm.value.is_active)
     }
     
-    console.log('Saving quiz with data:', formattedData)
     
     if (isEditing.value) {
       await api.put(`/admin/quizzes/${quizForm.value.id}`, formattedData)

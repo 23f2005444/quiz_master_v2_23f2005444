@@ -187,7 +187,6 @@ const handleRegister = async () => {
       return
     }
     
-    console.log('Submitting registration data:', { ...formData, password: '[HIDDEN]' })
     
     // Send registration request
     await authService.register(formData)
