@@ -1,6 +1,8 @@
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from controllers.extensions import db
+from datetime import datetime, timedelta
+import random
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -50,8 +52,8 @@ class Subject(db.Model):
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
     is_active = db.Column(db.Boolean, default=True)
 
-    # Updated relationship with cascade delete
-    chapter = db.relationship('Chapter', backref='subject', lazy=True, cascade='all, delete-orphan')
+    # Use string reference for forward declaration
+    chapters = db.relationship('Chapter', backref='subject', lazy=True, cascade='all, delete-orphan')
     creator = db.relationship('Admin', backref='created_subjects')
 
 class Chapter(db.Model):
@@ -65,8 +67,8 @@ class Chapter(db.Model):
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
     is_active = db.Column(db.Boolean, default=True)
 
-    # Updated relationship with cascade delete
-    quiz = db.relationship('Quiz', backref='chapter', lazy=True, cascade='all, delete-orphan')
+    # Use string reference for forward declaration
+    quizzes = db.relationship('Quiz', backref='chapter', lazy=True, cascade='all, delete-orphan')
     creator = db.relationship('Admin', backref='created_chapters')
 
 class Quiz(db.Model):
@@ -74,21 +76,74 @@ class Quiz(db.Model):
     chapter_id = db.Column(db.Integer, db.ForeignKey('chapter.id'), nullable=False)
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    date_of_quiz = db.Column(db.Date, nullable=False)
-    time_duration = db.Column(db.Integer, nullable=False)
+    
+    # Enhanced scheduling fields
+    start_date = db.Column(db.Date, nullable=False)  # Quiz available from this date
+    start_time = db.Column(db.Time, nullable=False)  # Quiz available from this time
+    end_date = db.Column(db.Date, nullable=True)     # Quiz expires on this date (optional)
+    end_time = db.Column(db.Time, nullable=True)     # Quiz expires at this time (optional)
+    
+    time_duration = db.Column(db.Integer, nullable=False)  # Duration in minutes
     passing_score = db.Column(db.Integer, nullable=False)
     total_marks = db.Column(db.Integer, nullable=False)
+    
+    # Auto-lock settings
+    auto_lock_after_expiry = db.Column(db.Boolean, default=True)
+    is_locked = db.Column(db.Boolean, default=False)  # Manual lock override
+    
     created_by = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
     is_active = db.Column(db.Boolean, default=True)
 
-    # Updated relationships with cascade delete
-    question = db.relationship('Question', backref='quiz', lazy=True, cascade='all, delete-orphan')
+    # Use string references for forward declarations
+    questions = db.relationship('Question', backref='quiz', lazy=True, cascade='all, delete-orphan')
     creator = db.relationship('Admin', backref='created_quizzes')
-    # Add cascade for quiz attempts and scores
     attempts = db.relationship('QuizAttempt', backref='quiz', cascade='all, delete-orphan')
     scores = db.relationship('Score', backref='quiz', cascade='all, delete-orphan')
+    
+    def is_available(self):
+        """Check if quiz is currently available for attempts"""
+        if not self.is_active or self.is_locked:
+            return False
+            
+        now = datetime.now()
+        
+        # Check start time
+        start_datetime = datetime.combine(self.start_date, self.start_time)
+        if now < start_datetime:
+            return False
+            
+        # Check end time if set
+        if self.end_date and self.end_time:
+            end_datetime = datetime.combine(self.end_date, self.end_time)
+            if now > end_datetime:
+                return False
+                
+        return True
+    
+    def time_until_start(self):
+        """Get time until quiz becomes available"""
+        now = datetime.now()
+        start_datetime = datetime.combine(self.start_date, self.start_time)
+        
+        if now >= start_datetime:
+            return None
+            
+        return start_datetime - now
+    
+    def time_until_end(self):
+        """Get time until quiz expires"""
+        if not self.end_date or not self.end_time:
+            return None
+            
+        now = datetime.now()
+        end_datetime = datetime.combine(self.end_date, self.end_time)
+        
+        if now >= end_datetime:
+            return None
+            
+        return end_datetime - now
 
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -105,7 +160,7 @@ class Question(db.Model):
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
 
     creator = db.relationship('Admin', backref='created_questions')
-    # Add cascade for question responses
+    # Use string reference for forward declaration
     responses = db.relationship('QuizResponse', backref='question', cascade='all, delete-orphan')
 
 class Score(db.Model):

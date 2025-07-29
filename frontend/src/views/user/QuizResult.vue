@@ -1,252 +1,3 @@
-<template>
-  <div class="page-layout">
-    <!-- Overlay for mobile when sidebar is visible -->
-    <div 
-      v-if="isMobile && sidebarVisible" 
-      class="sidebar-backdrop"
-      @click="toggleSidebar"
-    ></div>
-    
-    <!-- Sidebar -->
-    <UserSidebar 
-      :class="{ 'sidebar-visible': sidebarVisible }"
-      @close="sidebarVisible = false"
-    />
-    
-    <div class="main-content" :class="{ 'with-sidebar': sidebarVisible && !isMobile }">
-      <UserNavbar @toggle-sidebar="toggleSidebar" />
-      
-      <div class="container-fluid p-3 p-md-4">
-        <div v-if="loading" class="text-center my-5">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-          <p class="mt-2">Loading quiz results...</p>
-        </div>
-        
-        <div v-else>
-          <nav aria-label="breadcrumb" class="mb-4">
-            <ol class="breadcrumb">
-              <li class="breadcrumb-item"><router-link to="/subjects">Subjects</router-link></li>
-              <li class="breadcrumb-item">
-                <router-link :to="`/subjects/${subject.id}`">{{ subject.name }}</router-link>
-              </li>
-              <li class="breadcrumb-item">
-                <router-link :to="`/chapters/${chapter.id}/quizzes`">{{ chapter.name }}</router-link>
-              </li>
-              <li class="breadcrumb-item">
-                <router-link :to="`/quizzes/${quiz.id}`">{{ quiz.title }}</router-link>
-              </li>
-              <li class="breadcrumb-item active" aria-current="page">Results</li>
-            </ol>
-          </nav>
-          
-          <div class="card mb-4 shadow">
-            <div class="card-header bg-white py-3">
-              <h4 class="mb-0">Quiz Result: {{ quiz.title }}</h4>
-            </div>
-            <div class="card-body p-3 p-md-4">
-              <div class="row g-4">
-                <div class="col-12 col-lg-6">
-                  <div class="score-summary text-center mb-4 mb-lg-0">
-                    <div class="score-circle mx-auto mb-3" :class="scoreColorClass">
-                      <div class="score-value">{{ result.score_percentage }}%</div>
-                    </div>
-                    <h5>{{ scoreMessage }}</h5>
-                    <p class="text-muted">
-                      You scored {{ result.score }} out of {{ result.total_marks }} marks
-                    </p>
-                    <div class="result-stats mt-4 d-flex justify-content-center">
-                      <div class="me-4 text-center">
-                        <div class="stat-circle bg-success mx-auto mb-2">
-                          <i class="bi bi-check-lg text-white"></i>
-                        </div>
-                        <div class="h4 mb-0">{{ correctAnswers }}</div>
-                        <div class="small text-muted">Correct</div>
-                      </div>
-                      <div class="me-4 text-center">
-                        <div class="stat-circle bg-danger mx-auto mb-2">
-                          <i class="bi bi-x-lg text-white"></i>
-                        </div>
-                        <div class="h4 mb-0">{{ incorrectAnswers }}</div>
-                        <div class="small text-muted">Incorrect</div>
-                      </div>
-                      <div class="text-center">
-                        <div class="stat-circle bg-warning mx-auto mb-2">
-                          <i class="bi bi-dash-lg text-white"></i>
-                        </div>
-                        <div class="h4 mb-0">{{ unattemptedQuestions }}</div>
-                        <div class="small text-muted">Unattempted</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div class="col-12 col-lg-6">
-                  <div class="quiz-info p-3 p-md-4 bg-light rounded-3">
-                    <div class="row mb-4">
-                      <div class="col-6">
-                        <div class="text-muted small">Time Taken</div>
-                        <div>{{ formatDuration(result.time_taken) }}</div>
-                      </div>
-                      <div class="col-6">
-                        <div class="text-muted small">Date</div>
-                        <div>{{ formatDate(result.created_at) }}</div>
-                      </div>
-                    </div>
-                    <div class="row mb-4">
-                      <div class="col-6">
-                        <div class="text-muted small">Subject</div>
-                        <div>{{ subject.name }}</div>
-                      </div>
-                      <div class="col-6">
-                        <div class="text-muted small">Chapter</div>
-                        <div>{{ chapter.name }}</div>
-                      </div>
-                    </div>
-                    <div class="row">
-                      <div class="col-6">
-                        <div class="text-muted small">Passing Score</div>
-                        <div>{{ result.passing_score }}%</div>
-                      </div>
-                      <div class="col-6">
-                        <div class="text-muted small">Status</div>
-                        <div>
-                          <span 
-                            :class="`badge ${result.score_percentage >= result.passing_score ? 'bg-success' : 'bg-danger'}`"
-                          >
-                            {{ result.score_percentage >= result.passing_score ? 'PASSED' : 'FAILED' }}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="d-flex justify-content-between align-items-center mb-4">
-            <h5 class="mb-0">Questions & Answers</h5>
-            <div class="filter-controls">
-              <div class="btn-group btn-group-sm">
-                <button class="btn btn-outline-secondary" :class="{ 'active': filter === 'all' }" @click="filter = 'all'">
-                  All
-                </button>
-                <button class="btn btn-outline-success" :class="{ 'active': filter === 'correct' }" @click="filter = 'correct'">
-                  Correct
-                </button>
-                <button class="btn btn-outline-danger" :class="{ 'active': filter === 'incorrect' }" @click="filter = 'incorrect'">
-                  Incorrect
-                </button>
-                <button class="btn btn-outline-warning" :class="{ 'active': filter === 'unattempted' }" @click="filter = 'unattempted'">
-                  Unattempted
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          <div v-if="!result.questions || result.questions.length === 0" class="text-center my-5">
-            <p class="text-muted">No questions available for review</p>
-          </div>
-          
-          <div v-else class="mb-4">
-            <div 
-              v-for="(question, index) in filteredQuestions" 
-              :key="question.id" 
-              class="card mb-4 shadow-sm"
-            >
-              <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 class="mb-0">Question {{ index + 1 }}</h6>
-                </div>
-                <div>
-                  <span 
-                    v-if="question.is_correct" 
-                    class="badge bg-success"
-                    title="Correct Answer"
-                    >
-                    <i class="bi bi-check-lg"></i> {{ question.score || question.marks_obtained || 0 }}/{{ question.marks || question.marks_possible }}
-                    </span>
-                    <span 
-                    v-else-if="question.selected_option > 0" 
-                    class="badge bg-danger"
-                    title="Incorrect Answer"
-                    >
-                    <i class="bi bi-x-lg"></i> 0/{{ question.marks || question.marks_possible }}
-                    </span>
-                  <span 
-                    v-else 
-                    class="badge bg-warning"
-                    title="Not Attempted"
-                  >
-                    <i class="bi bi-dash-lg"></i> 0/{{ question.marks }}
-                  </span>
-                </div>
-              </div>
-              <div class="card-body p-3 p-md-4">
-                <p class="card-text question-text mb-4">{{ question.question_text }}</p>
-                
-                <div class="options-list">
-                  <div 
-                    v-for="i in 4" 
-                    :key="i" 
-                    class="option-item mb-3"
-                    :class="{
-                      'selected': question.selected_option === i,
-                      'correct': question.correct_option === i,
-                      'incorrect': question.selected_option === i && question.selected_option !== question.correct_option
-                    }"
-                  >
-                    <div class="d-flex align-items-center">
-                      <div 
-                        class="option-label me-3"
-                        :class="{
-                          'option-label-correct': question.correct_option === i,
-                          'option-label-selected': question.selected_option === i && question.selected_option !== question.correct_option
-                        }"
-                      >
-                        {{ ['A', 'B', 'C', 'D'][i-1] }}
-                      </div>
-                      <div class="option-text">
-                        {{ question['option_' + i] }}
-                      </div>
-                      <div class="ms-auto">
-                        <i 
-                          v-if="question.correct_option === i" 
-                          class="bi bi-check-circle-fill text-success"
-                        ></i>
-                        <i 
-                          v-else-if="question.selected_option === i" 
-                          class="bi bi-x-circle-fill text-danger"
-                        ></i>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div v-if="question.explanation" class="explanation mt-4 p-3 bg-light rounded-3">
-                  <h6 class="mb-2">Explanation</h6>
-                  <p class="mb-0">{{ question.explanation }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="d-flex gap-2 justify-content-center mt-5">
-            <router-link :to="`/quizzes/${quiz.id}`" class="btn btn-outline-primary">
-              <i class="bi bi-arrow-repeat me-2"></i> Attempt Again
-            </router-link>
-            <router-link to="/subjects" class="btn btn-primary">
-              <i class="bi bi-grid-fill me-2"></i> Browse More Subjects
-            </router-link>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
@@ -281,25 +32,26 @@ const checkScreenSize = () => {
   }
 }
 
-// Computed properties
+// Fixed computed properties using backend data
 const correctAnswers = computed(() => {
-  if (!result.value.questions) return 0
-  return result.value.questions.filter(q => q.is_correct).length
+  return result.value.correct_answers || 0
 })
 
 const incorrectAnswers = computed(() => {
-  if (!result.value.questions) return 0
-  return result.value.questions.filter(q => q.selected_option > 0 && !q.is_correct).length
+  return result.value.incorrect_answers || 0
 })
 
 const unattemptedQuestions = computed(() => {
-  if (!result.value.questions) return 0
-  return result.value.questions.filter(q => q.selected_option === 0).length
+  return result.value.unattempted || 0
+})
+
+const totalQuestions = computed(() => {
+  return result.value.total_questions || 0
 })
 
 const scoreColor = computed(() => {
   if (!result.value.score_percentage) return ''
-  if (result.value.score_percentage >= result.value.passing_score) {
+  if (result.value.score_percentage >= (result.value.passing_score || 60)) {
     return 'text-success'
   } else {
     return 'text-danger'
@@ -310,7 +62,7 @@ const scoreColorClass = computed(() => {
   if (!result.value.score_percentage) return ''
   if (result.value.score_percentage >= 90) {
     return 'bg-success-subtle border-success'
-  } else if (result.value.score_percentage >= result.value.passing_score) {
+  } else if (result.value.score_percentage >= (result.value.passing_score || 60)) {
     return 'bg-primary-subtle border-primary'
   } else {
     return 'bg-danger-subtle border-danger'
@@ -323,7 +75,7 @@ const scoreMessage = computed(() => {
     return 'Excellent! Outstanding performance!'
   } else if (result.value.score_percentage >= 75) {
     return 'Great job! Well done!'
-  } else if (result.value.score_percentage >= result.value.passing_score) {
+  } else if (result.value.score_percentage >= (result.value.passing_score || 60)) {
     return 'Good work! You passed the quiz.'
   } else {
     return 'Try again. You can do better next time!'
@@ -347,10 +99,7 @@ const filteredQuestions = computed(() => {
 
 onMounted(async () => {
   try {
-    // Check screen size initially
     checkScreenSize()
-    
-    // Add resize listener
     window.addEventListener('resize', checkScreenSize)
     
     // Load result details
@@ -401,6 +150,255 @@ const formatDuration = (minutes) => {
 }
 </script>
 
+<template>
+  <div class="page-layout">
+    <!-- Overlay for mobile when sidebar is visible -->
+    <div 
+      v-if="isMobile && sidebarVisible" 
+      class="sidebar-backdrop"
+      @click="toggleSidebar"
+    ></div>
+    
+    <!-- Sidebar -->
+    <UserSidebar 
+      :class="{ 'sidebar-visible': sidebarVisible }"
+      @close="sidebarVisible = false"
+    />
+    
+    <div class="main-content" :class="{ 'with-sidebar': sidebarVisible && !isMobile }">
+      <UserNavbar @toggle-sidebar="toggleSidebar" />
+      
+      <div class="container-fluid p-3 p-md-4">
+        <div v-if="loading" class="text-center my-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-2">Loading quiz results...</p>
+        </div>
+        
+        <div v-else>
+          <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item"><router-link to="/subjects">Subjects</router-link></li>
+              <li class="breadcrumb-item">
+                <router-link :to="`/subjects/${subject.id}`">{{ subject.name }}</router-link>
+              </li>
+              <li class="breadcrumb-item">
+                <router-link :to="`/chapters/${chapter.id}/quizzes`">{{ chapter.name }}</router-link>
+              </li>
+              <li class="breadcrumb-item">
+                <router-link :to="`/quizzes/${quiz.id}`">{{ quiz.title }}</router-link>
+              </li>
+              <li class="breadcrumb-item active" aria-current="page">Results</li>
+            </ol>
+          </nav>
+          
+          <div class="card mb-4 shadow">
+            <div class="card-header bg-white py-3">
+              <h4 class="mb-0">Quiz Result: {{ result.quiz_title }}</h4>
+            </div>
+            <div class="card-body p-3 p-md-4">
+              <div class="row g-4">
+                <div class="col-12 col-lg-6">
+                  <div class="score-summary text-center mb-4 mb-lg-0">
+                    <div class="score-circle mx-auto mb-3" :class="scoreColorClass">
+                      <div class="score-value">{{ result.score_percentage || 0 }}%</div>
+                    </div>
+                    <h5>{{ scoreMessage }}</h5>
+                    <p class="text-muted">
+                      You scored {{ result.score || 0 }} out of {{ result.total_marks || 0 }} marks
+                    </p>
+                    <div class="result-stats mt-4 d-flex justify-content-center">
+                      <div class="me-4 text-center">
+                        <div class="stat-circle bg-success text-white mx-auto mb-2">
+                          <i class="bi bi-check-lg"></i>
+                        </div>
+                        <div class="stat-number fw-bold">{{ correctAnswers }}</div>
+                        <div class="stat-label text-muted small">Correct</div>
+                      </div>
+                      <div class="me-4 text-center">
+                        <div class="stat-circle bg-danger text-white mx-auto mb-2">
+                          <i class="bi bi-x-lg"></i>
+                        </div>
+                        <div class="stat-number fw-bold">{{ incorrectAnswers }}</div>
+                        <div class="stat-label text-muted small">Incorrect</div>
+                      </div>
+                      <div class="text-center">
+                        <div class="stat-circle bg-warning text-white mx-auto mb-2">
+                          <i class="bi bi-dash-lg"></i>
+                        </div>
+                        <div class="stat-number fw-bold">{{ unattemptedQuestions }}</div>
+                        <div class="stat-label text-muted small">Unattempted</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-12 col-lg-6">
+                  <div class="quiz-info p-3 p-md-4 bg-light rounded-3">
+                    <div class="row mb-4">
+                      <div class="col-6">
+                        <div class="info-item">
+                          <h6 class="text-muted mb-1">Time Taken</h6>
+                          <div class="fw-medium">{{ formatDuration(result.time_taken) }}</div>
+                        </div>
+                      </div>
+                      <div class="col-6">
+                        <div class="info-item">
+                          <h6 class="text-muted mb-1">Date</h6>
+                          <div class="fw-medium">{{ formatDate(result.submitted_at) }}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="row mb-4">
+                      <div class="col-6">
+                        <div class="info-item">
+                          <h6 class="text-muted mb-1">Subject</h6>
+                          <div class="fw-medium">{{ subject.name }}</div>
+                        </div>
+                      </div>
+                      <div class="col-6">
+                        <div class="info-item">
+                          <h6 class="text-muted mb-1">Chapter</h6>
+                          <div class="fw-medium">{{ chapter.name }}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col-6">
+                        <div class="info-item">
+                          <h6 class="text-muted mb-1">Passing Score</h6>
+                          <div class="fw-medium">{{ result.passing_score || 60 }}%</div>
+                        </div>
+                      </div>
+                      <div class="col-6">
+                        <div class="info-item">
+                          <h6 class="text-muted mb-1">Status</h6>
+                          <span 
+                            :class="`badge ${result.is_passed ? 'bg-success' : 'bg-danger'}`"
+                          >
+                            {{ result.is_passed ? 'PASSED' : 'FAILED' }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="mb-0">Questions & Answers ({{ totalQuestions }} total)</h5>
+            <div class="filter-controls">
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-secondary" :class="{ 'active': filter === 'all' }" @click="filter = 'all'">
+                  All
+                </button>
+                <button class="btn btn-outline-success" :class="{ 'active': filter === 'correct' }" @click="filter = 'correct'">
+                  Correct ({{ correctAnswers }})
+                </button>
+                <button class="btn btn-outline-danger" :class="{ 'active': filter === 'incorrect' }" @click="filter = 'incorrect'">
+                  Incorrect ({{ incorrectAnswers }})
+                </button>
+                <button class="btn btn-outline-warning" :class="{ 'active': filter === 'unattempted' }" @click="filter = 'unattempted'">
+                  Unattempted ({{ unattemptedQuestions }})
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div v-if="!result.responses || result.responses.length === 0" class="text-center my-5">
+            <p class="text-muted">No questions available for review</p>
+          </div>
+          
+          <div v-else class="mb-4">
+            <div 
+              v-for="(question, index) in filteredQuestions" 
+              :key="question.id" 
+              class="card mb-4 shadow-sm"
+            >
+              <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="mb-0">Question {{ result.responses.findIndex(q => q.id === question.id) + 1 }}</h6>
+                </div>
+                <div>
+                  <span 
+                    v-if="question.is_correct" 
+                    class="badge bg-success"
+                    title="Correct Answer"
+                  >
+                    <i class="bi bi-check-lg"></i> {{ question.score }}/{{ question.marks }}
+                  </span>
+                  <span 
+                    v-else-if="question.selected_option > 0" 
+                    class="badge bg-danger"
+                    title="Incorrect Answer"
+                  >
+                    <i class="bi bi-x-lg"></i> 0/{{ question.marks }}
+                  </span>
+                  <span 
+                    v-else 
+                    class="badge bg-warning"
+                    title="Not Attempted"
+                  >
+                    <i class="bi bi-dash-lg"></i> 0/{{ question.marks }}
+                  </span>
+                </div>
+              </div>
+              <div class="card-body p-3 p-md-4">
+                <p class="card-text question-text mb-4">{{ question.question_text }}</p>
+                
+                <div class="options-list">
+                  <div 
+                    v-for="i in 4" 
+                    :key="i" 
+                    class="option-item mb-3"
+                    :class="{
+                      'selected': question.selected_option === i,
+                      'correct': question.correct_option === i,
+                      'incorrect': question.selected_option === i && question.selected_option !== question.correct_option
+                    }"
+                  >
+                    <div class="d-flex align-items-center">
+                      <div 
+                        class="option-label me-3"
+                        :class="{
+                          'option-label-correct': question.correct_option === i,
+                          'option-label-selected': question.selected_option === i && question.selected_option !== question.correct_option
+                        }"
+                      >
+                        {{ String.fromCharCode(64 + i) }}
+                      </div>
+                      <div class="option-text">
+                        {{ question[`option_${i}`] }}
+                      </div>
+                      <div class="ms-auto">
+                        <i v-if="question.correct_option === i" class="bi bi-check-circle-fill text-success"></i>
+                        <i v-else-if="question.selected_option === i" class="bi bi-x-circle-fill text-danger"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="d-flex gap-2 justify-content-center mt-5">
+            <router-link :to="`/quizzes/${quiz.id}`" class="btn btn-outline-primary">
+              <i class="bi bi-arrow-repeat me-2"></i> Attempt Again
+            </router-link>
+            <router-link to="/subjects" class="btn btn-primary">
+              <i class="bi bi-grid-fill me-2"></i> Browse More Subjects
+            </router-link>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<!-- Keep the existing styles -->
 <style scoped>
 .page-layout {
   min-height: 100vh;
@@ -578,20 +576,6 @@ const formatDuration = (minutes) => {
   
   .filter-controls .btn-group {
     flex-wrap: nowrap;
-  }
-}
-
-@media (max-width: 575.98px) {
-  h4 {
-    font-size: 1.25rem;
-  }
-  
-  h5 {
-    font-size: 1.1rem;
-  }
-  
-  h6 {
-    font-size: 1rem;
   }
 }
 </style>

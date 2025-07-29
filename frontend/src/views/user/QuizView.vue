@@ -102,6 +102,58 @@
               </div>
             </div>
           </div>
+
+          <div class="card mb-4 shadow">
+            <div class="card-header bg-white py-3">
+              <h5 class="mb-0">
+                <i class="bi bi-calendar-clock me-2"></i>Quiz Schedule
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="schedule-info">
+                    <h6 class="text-muted mb-1">Available From</h6>
+                    <div class="fw-medium">
+                      {{ formatDateTime(quiz.start_date, quiz.start_time) }}
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="schedule-info">
+                    <h6 class="text-muted mb-1">Available Until</h6>
+                    <div class="fw-medium">
+                      {{ quiz.end_date && quiz.end_time ? formatDateTime(quiz.end_date, quiz.end_time) : 'No end time set' }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-3">
+                <div 
+                  class="alert alert-dismissible mb-0"
+                  :class="{
+                    'alert-success': scheduleStatus.isAvailable && !scheduleStatus.isLocked,
+                    'alert-warning': scheduleStatus.timeUntilStart || scheduleStatus.isLocked,
+                    'alert-danger': !scheduleStatus.isAvailable && !scheduleStatus.timeUntilStart
+                  }"
+                >
+                  <div class="d-flex align-items-center">
+                    <i 
+                      class="bi me-2"
+                      :class="{
+                        'bi-check-circle': scheduleStatus.isAvailable && !scheduleStatus.isLocked,
+                        'bi-clock': scheduleStatus.timeUntilStart,
+                        'bi-lock': scheduleStatus.isLocked,
+                        'bi-x-circle': !scheduleStatus.isAvailable && !scheduleStatus.timeUntilStart
+                      }"
+                    ></i>
+                    <span>{{ scheduleStatus.message }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           
           <div v-if="previousAttempts.length > 0" class="card mb-4 shadow">
             <div class="card-header bg-white py-3">
@@ -153,19 +205,38 @@
               <template v-else>
                 <div class="d-flex justify-content-center mb-4">
                   <div class="quiz-start-icon bg-light rounded-circle d-flex align-items-center justify-content-center">
-                    <i class="bi bi-lightbulb text-primary"></i>
+                    <i 
+                      class="bi"
+                      :class="{
+                        'bi-lightbulb text-primary': scheduleStatus.isAvailable,
+                        'bi-clock text-warning': scheduleStatus.timeUntilStart,
+                        'bi-lock text-danger': scheduleStatus.isLocked,
+                        'bi-x-circle text-danger': !scheduleStatus.isAvailable && !scheduleStatus.timeUntilStart
+                      }"
+                    ></i>
                   </div>
                 </div>
-                <h3>Ready to start the quiz?</h3>
-                <p class="text-muted mb-4">Make sure you have enough time to complete the quiz. Once started, the timer cannot be paused.</p>
+                <h3>{{ scheduleStatus.isAvailable ? 'Ready to start the quiz?' : 'Quiz Not Available' }}</h3>
+                <p class="text-muted mb-4">
+                  {{ scheduleStatus.isAvailable 
+                    ? 'Make sure you have enough time to complete the quiz. Once started, the timer cannot be paused.' 
+                    : scheduleStatus.message 
+                  }}
+                </p>
                 <button 
                   @click="startQuiz" 
-                  class="btn btn-primary btn-lg"
-                  :disabled="startingQuiz"
+                  class="btn btn-lg"
+                  :class="{
+                    'btn-primary': scheduleStatus.isAvailable,
+                    'btn-secondary': !scheduleStatus.isAvailable
+                  }"
+                  :disabled="startingQuiz || !scheduleStatus.isAvailable"
                 >
                   <span v-if="startingQuiz" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                  <i v-else class="bi bi-play-fill me-2"></i>
-                  Start Quiz
+                  <i v-else-if="scheduleStatus.isAvailable" class="bi bi-play-fill me-2"></i>
+                  <i v-else-if="scheduleStatus.timeUntilStart" class="bi bi-clock me-2"></i>
+                  <i v-else class="bi bi-lock me-2"></i>
+                  {{ scheduleStatus.isAvailable ? 'Start Quiz' : 'Not Available' }}
                 </button>
               </template>
             </div>
@@ -212,6 +283,14 @@ const checkScreenSize = () => {
   }
 }
 
+const scheduleStatus = ref({
+  isAvailable: false,
+  isLocked: false,
+  timeUntilStart: null,
+  timeUntilEnd: null,
+  message: ''
+})
+
 onMounted(async () => {
   try {
     // Check screen size initially
@@ -223,6 +302,9 @@ onMounted(async () => {
     // Load quiz details
     const quizResponse = await api.get(`/quizzes/${quizId}`)
     quiz.value = quizResponse.data
+    
+    // Update schedule status
+    updateScheduleStatus()
     
     // Load chapter details
     const chapterResponse = await api.get(`/chapters/${quiz.value.chapter_id}`)
@@ -251,26 +333,101 @@ onUnmounted(() => {
 })
 
 const startQuiz = async () => {
+  if (!scheduleStatus.value.isAvailable) {
+    alert(scheduleStatus.value.message)
+    return
+  }
+  
   startingQuiz.value = true
   try {
-    // Create a new attempt
+    // Check if quizId is valid before making the request
+    if (!quizId || isNaN(quizId)) {
+      throw new Error('Invalid quiz ID')
+    }
+    
+    // Check if the quiz has questions before creating an attempt
+    if (questionCount.value <= 0) {
+      alert('This quiz has no questions. Please try a different quiz.')
+      return
+    }
+    
+    console.log('Starting quiz attempt for quiz ID:', quizId)
     const response = await api.post(`/quizzes/${quizId}/attempts`)
+    console.log('Quiz attempt response:', response.data)
+    
     const attemptId = response.data.id
     
-    // Redirect to quiz attempt page
+    // Verify that we got a valid attempt ID before redirecting
+    if (!attemptId || isNaN(attemptId)) {
+      console.error('Invalid attempt ID received:', response.data)
+      throw new Error('Invalid attempt ID returned from server')
+    }
+    
+    console.log('Redirecting to attempt ID:', attemptId)
     router.push(`/attempts/${attemptId}/take`)
   } catch (error) {
     console.error('Error starting quiz:', error)
-    alert('Failed to start the quiz. Please try again.')
+    if (error.response?.data?.error) {
+      alert(error.response.data.error)
+    } else if (error.message.includes('backend server')) {
+      alert('Backend server is not responding. Please check if it\'s running.')
+    } else {
+      alert('Failed to start the quiz. Please try again.')
+    }
   } finally {
     startingQuiz.value = false
   }
 }
 
+const updateScheduleStatus = () => {
+  scheduleStatus.value = {
+    isAvailable: quiz.value.is_available,
+    isLocked: quiz.value.is_locked,
+    timeUntilStart: quiz.value.time_until_start,
+    timeUntilEnd: quiz.value.time_until_end,
+    message: getScheduleMessage()
+  }
+}
+
+const getScheduleMessage = () => {
+  if (quiz.value.is_locked) {
+    return 'This quiz is currently locked by the administrator.'
+  }
+  if (quiz.value.time_until_start) {
+    return `This quiz will be available ${quiz.value.time_until_start}.`
+  }
+  if (!quiz.value.is_available && quiz.value.end_date) {
+    return 'This quiz has expired and is no longer available.'
+  }
+  if (quiz.value.time_until_end) {
+    return `This quiz will expire ${quiz.value.time_until_end}.`
+  }
+  return 'This quiz is currently available for attempts.'
+}
+
+const formatDateTime = (date, time) => {
+  if (!date) return 'Not set'
+  try {
+    if (time) {
+      // Combine date and time
+      const dateTimeStr = `${date}T${time}`
+      return format(new Date(dateTimeStr), 'MMM dd, yyyy, h:mm a')
+    } else {
+      // Just date
+      return format(new Date(date), 'MMM dd, yyyy')
+    }
+  } catch (e) {
+    console.error('Error formatting date/time:', e)
+    return `${date} ${time || ''}`
+  }
+}
+
 const formatDate = (dateString) => {
+  if (!dateString) return ''
   try {
     return format(new Date(dateString), 'MMM dd, yyyy, h:mm a')
   } catch (e) {
+    console.error('Error formatting date:', e)
     return dateString
   }
 }

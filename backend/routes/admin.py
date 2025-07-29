@@ -11,21 +11,17 @@ def admin_required(fn):
     @jwt_required()
     def wrapper(*args, **kwargs):
         current_user_id = get_jwt_identity()
-        print("JWT Identity:", current_user_id)  # Debugging
+        print("JWT Identity:", current_user_id)
         
-        # CRITICAL FIX: Current user ID is now a string, not a dict
         try:
-            # Convert string ID to int and look up admin
             admin_id = int(current_user_id)
             admin = Admin.query.get(admin_id)
-            
             if not admin:
                 return jsonify({"msg": "Admin not found"}), 403
-                
-            return fn(*args, **kwargs)
         except (ValueError, TypeError) as e:
-            return jsonify({"msg": f"Invalid admin ID: {str(e)}"}), 422
+            return jsonify({"msg": "Invalid admin ID"}), 400
             
+        return fn(*args, **kwargs)
     wrapper.__name__ = fn.__name__
     return wrapper
 
@@ -44,11 +40,10 @@ def get_users():
             'created_at': user.created_at.isoformat()
         } for user in users]
         
-        return jsonify(user_list), 200
+        return jsonify(user_list)  # FIXED: Added return
     except Exception as e:
-        return jsonify({"msg": f"Error retrieving users: {str(e)}"}), 500
-
-# Subject Management
+        return jsonify({"error": str(e)}), 500  # FIXED: Added return
+    
 @admin_bp.route('/subjects', methods=['GET'])
 @admin_required
 def get_subjects():
@@ -62,9 +57,26 @@ def get_subjects():
             'created_at': subject.created_at.isoformat()
         } for subject in subjects]
         
-        return jsonify(subject_list), 200
+        return jsonify(subject_list)  # FIXED: Added return
     except Exception as e:
-        return jsonify({"msg": f"Error retrieving subjects: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500 
+
+# Subject Management
+@admin_bp.route('/subjects/<int:subject_id>', methods=['GET'])
+@admin_required
+def get_subject(subject_id):
+    try:
+        subject = Subject.query.get_or_404(subject_id)
+        
+        return jsonify({
+            'id': subject.id,
+            'name': subject.name,
+            'description': subject.description,
+            'is_active': subject.is_active,
+            'created_at': subject.created_at.isoformat() if subject.created_at else None
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @admin_bp.route('/subjects', methods=['POST'])
 @admin_required
@@ -113,22 +125,6 @@ def create_subject():
         return jsonify({"msg": f"Database error: {str(e)}"}), 500
     except Exception as e:
         return jsonify({"msg": f"Error creating subject: {str(e)}"}), 500
-    
-@admin_bp.route('/subjects/<int:subject_id>', methods=['GET'])
-@admin_required
-def get_subject(subject_id):
-    try:
-        subject = Subject.query.get_or_404(subject_id)
-        
-        return jsonify({
-            'id': subject.id,
-            'name': subject.name,
-            'description': subject.description,
-            'is_active': subject.is_active,
-            'created_at': subject.created_at.isoformat()
-        }), 200
-    except Exception as e:
-        return jsonify({"msg": f"Error retrieving subject: {str(e)}"}), 500
 
 @admin_bp.route('/subjects/<int:subject_id>', methods=['PUT'])
 @admin_required
@@ -245,12 +241,13 @@ def get_chapter(chapter_id):
             'id': chapter.id,
             'name': chapter.name,
             'description': chapter.description,
+            'subject_id': chapter.subject_id,
             'sequence_number': chapter.sequence_number,
             'is_active': chapter.is_active,
-            'created_at': chapter.created_at.isoformat()
-        }), 200
+            'created_at': chapter.created_at.isoformat() if chapter.created_at else None
+        })
     except Exception as e:
-        return jsonify({"msg": f"Error retrieving chapter: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
 
 @admin_bp.route('/chapters/<int:chapter_id>', methods=['PUT'])
 @admin_required
@@ -304,18 +301,27 @@ def get_quizzes(chapter_id):
             'id': quiz.id,
             'title': quiz.title,
             'description': quiz.description,
-            'date_of_quiz': quiz.date_of_quiz.isoformat(),
+            'start_date': quiz.start_date.isoformat() if quiz.start_date else None,
+            'start_time': quiz.start_time.strftime('%H:%M') if quiz.start_time else None,
+            'end_date': quiz.end_date.isoformat() if quiz.end_date else None,
+            'end_time': quiz.end_time.strftime('%H:%M') if quiz.end_time else None,
             'time_duration': quiz.time_duration,
             'passing_score': quiz.passing_score,
             'total_marks': quiz.total_marks,
+            'auto_lock_after_expiry': quiz.auto_lock_after_expiry,
+            'is_locked': quiz.is_locked,
             'is_active': quiz.is_active,
-            'created_at': quiz.created_at.isoformat()
+            'is_available': quiz.is_available(),
+            'time_until_start': str(quiz.time_until_start()) if quiz.time_until_start() else None,
+            'time_until_end': str(quiz.time_until_end()) if quiz.time_until_end() else None,
+            'created_at': quiz.created_at.isoformat() if quiz.created_at else None
         } for quiz in quizzes]
         
-        return jsonify(quiz_list), 200
+        return jsonify(quiz_list)  # This was missing!
     except Exception as e:
-        return jsonify({"msg": f"Error retrieving quizzes: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
 
+# Add this function to the existing admin.py file
 @admin_bp.route('/chapters/<int:chapter_id>/quizzes', methods=['POST'])
 @admin_required
 def create_quiz(chapter_id):
@@ -323,60 +329,43 @@ def create_quiz(chapter_id):
         data = request.json
         current_user_id = get_jwt_identity()
         
-        # Print received data for debugging
-        print("Received quiz data:", data)
-        
-        # Convert string ID to integer
-        try:
-            admin_id = int(current_user_id)
-        except (ValueError, TypeError):
-            return jsonify({"msg": "Invalid admin ID format"}), 422
-            
-        # Check if chapter exists
-        chapter = Chapter.query.get_or_404(chapter_id)
+        admin_id = int(current_user_id)
         
         # Validate required fields
-        required_fields = ['title', 'description', 'date_of_quiz', 'time_duration', 'passing_score', 'total_marks']
+        required_fields = ['title', 'description', 'start_date', 'start_time', 'time_duration', 'passing_score', 'total_marks']
         for field in required_fields:
-            if field not in data or data[field] is None:
-                return jsonify({"msg": f"Field '{field}' is required"}), 422
+            if field not in data or not data[field]:
+                return jsonify({"error": f"Missing required field: {field}"}), 400
         
-        # Ensure numeric fields are valid
+        # Parse dates and times
+        from datetime import datetime, date, time
+        
         try:
-            time_duration = int(data['time_duration'])
-            passing_score = int(data['passing_score'])
-            total_marks = int(data['total_marks'])
+            start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
+            start_time = datetime.strptime(data['start_time'], '%H:%M').time()
             
-            if time_duration <= 0:
-                return jsonify({"msg": "Time duration must be greater than 0"}), 422
-            if passing_score <= 0:
-                return jsonify({"msg": "Passing score must be greater than 0"}), 422
-            if total_marks <= 0:
-                return jsonify({"msg": "Total marks must be greater than 0"}), 422
-            if passing_score > total_marks:
-                return jsonify({"msg": "Passing score cannot be greater than total marks"}), 422
-        except (ValueError, TypeError):
-            return jsonify({"msg": "Invalid numeric values provided"}), 422
-            
-        # Parse date properly
-        try:
-            from datetime import datetime
-            # Handle both date-only and full ISO format
-            if 'T' in data['date_of_quiz']:
-                date_of_quiz = datetime.fromisoformat(data['date_of_quiz'].replace('Z', '+00:00'))
-            else:
-                date_of_quiz = datetime.strptime(data['date_of_quiz'], '%Y-%m-%d')
-        except ValueError:
-            return jsonify({"msg": "Invalid date format. Use YYYY-MM-DD"}), 422
+            end_date = None
+            end_time = None
+            if data.get('end_date'):
+                end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
+            if data.get('end_time'):
+                end_time = datetime.strptime(data['end_time'], '%H:%M').time()
+                
+        except ValueError as e:
+            return jsonify({"error": f"Invalid date/time format: {str(e)}"}), 400
         
         new_quiz = Quiz(
             chapter_id=chapter_id,
             title=data['title'],
             description=data['description'],
-            date_of_quiz=date_of_quiz,
-            time_duration=time_duration,
-            passing_score=passing_score,
-            total_marks=total_marks,
+            start_date=start_date,
+            start_time=start_time,
+            end_date=end_date,
+            end_time=end_time,
+            time_duration=int(data['time_duration']),
+            passing_score=int(data['passing_score']),
+            total_marks=int(data['total_marks']),
+            auto_lock_after_expiry=data.get('auto_lock_after_expiry', True),
             created_by=admin_id,
             is_active=data.get('is_active', True)
         )
@@ -386,20 +375,13 @@ def create_quiz(chapter_id):
         
         return jsonify({
             'id': new_quiz.id,
-            'title': new_quiz.title,
-            'description': new_quiz.description,
-            'date_of_quiz': new_quiz.date_of_quiz.isoformat(),
-            'time_duration': new_quiz.time_duration,
-            'passing_score': new_quiz.passing_score,
-            'total_marks': new_quiz.total_marks,
-            'is_active': new_quiz.is_active
+            'message': 'Quiz created successfully'
         }), 201
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        return jsonify({"msg": f"Database error: {str(e)}"}), 500
+        
     except Exception as e:
-        return jsonify({"msg": f"Error creating quiz: {str(e)}"}), 500
-    
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 @admin_bp.route('/quizzes/<int:quiz_id>', methods=['GET'])
 @admin_required
 def get_quiz(quiz_id):
@@ -410,14 +392,49 @@ def get_quiz(quiz_id):
             'id': quiz.id,
             'title': quiz.title,
             'description': quiz.description,
-            'date_of_quiz': quiz.date_of_quiz.isoformat(),
+            'start_date': quiz.start_date.isoformat(),
+            'start_time': quiz.start_time.strftime('%H:%M'),
+            'end_date': quiz.end_date.isoformat() if quiz.end_date else None,
+            'end_time': quiz.end_time.strftime('%H:%M') if quiz.end_time else None,
             'time_duration': quiz.time_duration,
             'passing_score': quiz.passing_score,
             'total_marks': quiz.total_marks,
-            'is_active': quiz.is_active
-        }), 200
+            'auto_lock_after_expiry': quiz.auto_lock_after_expiry,
+            'is_locked': quiz.is_locked,
+            'chapter_id': quiz.chapter_id,
+            'created_at': quiz.created_at.isoformat() if quiz.created_at else None,
+            'is_active': quiz.is_active,
+            'is_available': quiz.is_available(),
+            'time_until_start': str(quiz.time_until_start()) if quiz.time_until_start() else None,
+            'time_until_end': str(quiz.time_until_end()) if quiz.time_until_end() else None
+        })
     except Exception as e:
-        return jsonify({"msg": f"Error retrieving quiz: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
+
+# Add quiz lock/unlock endpoints
+@admin_bp.route('/quizzes/<int:quiz_id>/lock', methods=['PUT'])
+@admin_required
+def lock_quiz(quiz_id):
+    try:
+        quiz = Quiz.query.get_or_404(quiz_id)
+        quiz.is_locked = True
+        db.session.commit()
+        
+        return jsonify({"msg": "Quiz locked successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@admin_bp.route('/quizzes/<int:quiz_id>/unlock', methods=['PUT'])
+@admin_required
+def unlock_quiz(quiz_id):
+    try:
+        quiz = Quiz.query.get_or_404(quiz_id)
+        quiz.is_locked = False
+        db.session.commit()
+        
+        return jsonify({"msg": "Quiz unlocked successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @admin_bp.route('/quizzes/<int:quiz_id>', methods=['PUT'])
 @admin_required
@@ -425,6 +442,8 @@ def update_quiz(quiz_id):
     try:
         data = request.json
         quiz = Quiz.query.get_or_404(quiz_id)
+        
+        print("Received quiz update data:", data)
         
         # Update basic text fields
         if 'title' in data:
@@ -435,64 +454,91 @@ def update_quiz(quiz_id):
         # Handle numeric fields with validation
         if 'time_duration' in data:
             try:
-                time_duration = int(data['time_duration'])
-                if time_duration <= 0:
-                    return jsonify({"msg": "Time duration must be greater than 0"}), 422
-                quiz.time_duration = time_duration
+                quiz.time_duration = int(data['time_duration'])
             except (ValueError, TypeError):
-                return jsonify({"msg": "Invalid time duration value"}), 422
+                return jsonify({"msg": "Invalid time duration"}), 400
                 
         if 'passing_score' in data:
             try:
-                passing_score = int(data['passing_score'])
-                if passing_score <= 0:
-                    return jsonify({"msg": "Passing score must be greater than 0"}), 422
-                quiz.passing_score = passing_score
+                quiz.passing_score = int(data['passing_score'])
             except (ValueError, TypeError):
-                return jsonify({"msg": "Invalid passing score value"}), 422
+                return jsonify({"msg": "Invalid passing score"}), 400
                 
         if 'total_marks' in data:
             try:
-                total_marks = int(data['total_marks'])
-                if total_marks <= 0:
-                    return jsonify({"msg": "Total marks must be greater than 0"}), 422
-                quiz.total_marks = total_marks
+                quiz.total_marks = int(data['total_marks'])
             except (ValueError, TypeError):
-                return jsonify({"msg": "Invalid total marks value"}), 422
-                
-        # Validate logical constraints
-        if quiz.passing_score > quiz.total_marks:
-            return jsonify({"msg": "Passing score cannot be greater than total marks"}), 422
-            
-        # Handle date field
-        if 'date_of_quiz' in data:
+                return jsonify({"msg": "Invalid total marks"}), 400
+        
+        # Handle scheduling fields
+        if 'start_date' in data and data['start_date']:
             try:
                 from datetime import datetime
-                # Handle both date-only and full ISO format
-                if 'T' in data['date_of_quiz']:
-                    date_of_quiz = datetime.fromisoformat(data['date_of_quiz'].replace('Z', '+00:00'))
-                else:
-                    date_of_quiz = datetime.strptime(data['date_of_quiz'], '%Y-%m-%d')
-                quiz.date_of_quiz = date_of_quiz
+                quiz.start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
             except ValueError:
-                return jsonify({"msg": "Invalid date format. Use YYYY-MM-DD"}), 422
+                return jsonify({"msg": "Invalid start date format"}), 400
                 
-        # Update active status
+        if 'start_time' in data and data['start_time']:
+            try:
+                from datetime import datetime
+                quiz.start_time = datetime.strptime(data['start_time'], '%H:%M').time()
+            except ValueError:
+                return jsonify({"msg": "Invalid start time format"}), 400
+                
+        # Handle optional end date and time
+        if 'end_date' in data:
+            if data['end_date'] and data['end_date'].strip():
+                try:
+                    quiz.end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
+                except ValueError:
+                    return jsonify({"msg": "Invalid end date format"}), 400
+            else:
+                quiz.end_date = None
+                
+        if 'end_time' in data:
+            if data['end_time'] and data['end_time'].strip():
+                try:
+                    quiz.end_time = datetime.strptime(data['end_time'], '%H:%M').time()
+                except ValueError:
+                    return jsonify({"msg": "Invalid end time format"}), 400
+            else:
+                quiz.end_time = None
+        
+        # Handle boolean fields
+        if 'auto_lock_after_expiry' in data:
+            quiz.auto_lock_after_expiry = bool(data['auto_lock_after_expiry'])
+            
         if 'is_active' in data:
             quiz.is_active = bool(data['is_active'])
+        
+        # Validate logical constraints
+        if quiz.passing_score > 100:
+            return jsonify({"msg": "Passing score cannot exceed 100%"}), 400
+            
+        if quiz.total_marks <= 0:
+            return jsonify({"msg": "Total marks must be greater than 0"}), 400
         
         db.session.commit()
         
         return jsonify({
-            'id': quiz.id,
-            'title': quiz.title,
-            'description': quiz.description,
-            'date_of_quiz': quiz.date_of_quiz.isoformat(),
-            'time_duration': quiz.time_duration,
-            'passing_score': quiz.passing_score,
-            'total_marks': quiz.total_marks,
-            'is_active': quiz.is_active
-        }), 200
+            "msg": "Quiz updated successfully",
+            "quiz": {
+                "id": quiz.id,
+                "title": quiz.title,
+                "description": quiz.description,
+                "start_date": quiz.start_date.isoformat() if quiz.start_date else None,
+                "start_time": quiz.start_time.strftime('%H:%M') if quiz.start_time else None,
+                "end_date": quiz.end_date.isoformat() if quiz.end_date else None,
+                "end_time": quiz.end_time.strftime('%H:%M') if quiz.end_time else None,
+                "time_duration": quiz.time_duration,
+                "passing_score": quiz.passing_score,
+                "total_marks": quiz.total_marks,
+                "auto_lock_after_expiry": quiz.auto_lock_after_expiry,
+                "is_active": quiz.is_active,
+                "is_available": quiz.is_available()
+            }
+        })
+        
     except SQLAlchemyError as e:
         db.session.rollback()
         return jsonify({"msg": f"Database error: {str(e)}"}), 500
@@ -665,22 +711,20 @@ def delete_question(question_id):
 @admin_required
 def get_dashboard_stats():
     try:
-        # Count statistics
+        # Get counts for dashboard stats
         users_count = User.query.count()
-        subjects_count = Subject.query.count()
-        chapters_count = Chapter.query.count()
-        quizzes_count = Quiz.query.count()
+        subjects_count = Subject.query.filter_by(is_active=True).count()
+        quizzes_count = Quiz.query.filter_by(is_active=True).count()
         questions_count = Question.query.count()
         
         return jsonify({
             'users_count': users_count,
             'subjects_count': subjects_count,
-            'chapters_count': chapters_count,
             'quizzes_count': quizzes_count,
             'questions_count': questions_count
-        }), 200
+        })  # FIXED: Added return
     except Exception as e:
-        return jsonify({"msg": f"Error retrieving dashboard stats: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500 
 
 # Debugging endpoint to check JWT token
 @admin_bp.route('/debug-token', methods=['GET'])

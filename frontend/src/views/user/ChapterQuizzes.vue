@@ -100,49 +100,41 @@
               <div v-for="quiz in filteredQuizzes" :key="quiz.id" class="col-12 col-sm-6 col-lg-4">
                 <div class="card h-100 quiz-card">
                   <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                      <h5 class="card-title">{{ quiz.title }}</h5>
-                      <span class="badge bg-primary">{{ quiz.total_marks }} marks</span>
-                    </div>
-                    
-                    <p class="card-text text-muted mb-3">{{ quiz.description }}</p>
+                    <h5 class="card-title">{{ quiz.title }}</h5>
+                    <p class="card-text text-muted">{{ quiz.description }}</p>
                     
                     <div class="quiz-stats mb-3">
                       <div class="row row-cols-2 g-2">
                         <div class="col">
                           <div class="stat-item">
-                            <i class="bi bi-clock stat-icon"></i>
+                            <div class="stat-icon">
+                              <i class="bi bi-clock"></i>
+                            </div>
                             <div class="stat-info">
-                              <div class="stat-label">Duration</div>
+                              <span class="stat-label">Duration</span>
                               <div class="stat-value">{{ formatDuration(quiz.time_duration) }}</div>
                             </div>
                           </div>
                         </div>
                         <div class="col">
                           <div class="stat-item">
-                            <i class="bi bi-question-circle stat-icon"></i>
+                            <div class="stat-icon">
+                              <i class="bi bi-calendar"></i>
+                            </div>
                             <div class="stat-info">
-                              <div class="stat-label">Questions</div>
-                              <div class="stat-value">{{ quiz.question_count }}</div>
+                              <span class="stat-label">Date</span>
+                              <div class="stat-value">{{ formatDate(quiz.start_date) }}</div>
                             </div>
                           </div>
                         </div>
                         <div class="col">
-                          <div class="stat-item">
-                            <i class="bi bi-award stat-icon"></i>
-                            <div class="stat-info">
-                              <div class="stat-label">Passing</div>
-                              <div class="stat-value">{{ quiz.passing_score }}%</div>
-                            </div>
-                          </div>
-                        </div>
-                        <div class="col">
-                          <div class="stat-item">
-                            <i class="bi bi-calendar-date stat-icon"></i>
-                            <div class="stat-info">
-                              <div class="stat-label">Date</div>
-                              <div class="stat-value">{{ formatDate(quiz.date_of_quiz) }}</div>
-                            </div>
+                          <div class="d-flex align-items-center">
+                            <span class="badge" :class="getAvailabilityBadgeClass(quiz)">
+                              {{ getAvailabilityText(quiz) }}
+                            </span>
+                            <span v-if="quiz.time_until_end" class="ms-2 small text-danger">
+                              Expires {{ formatRelativeTime(quiz.end_date) }}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -151,16 +143,18 @@
                     <div class="progress mb-3" style="height: 5px;" v-if="quiz.attempts_count > 0">
                       <div 
                         class="progress-bar" 
-                        role="progressbar" 
-                        :style="{width: `${quiz.best_score || 0}%`}"
                         :class="getScoreClass(quiz.best_score)"
+                        role="progressbar" 
+                        :style="{ width: quiz.best_score + '%' }" 
+                        :aria-valuenow="quiz.best_score" 
                         aria-valuemin="0" 
                         aria-valuemax="100"
                       ></div>
                     </div>
                     
                     <p class="small text-muted mb-0" v-if="quiz.attempts_count > 0">
-                      Best score: {{ quiz.best_score }}% ({{ quiz.attempts_count }} attempts)
+                      Best Score: <span :class="`fw-bold ${quiz.best_score >= 60 ? 'text-success' : 'text-danger'}`">{{ quiz.best_score }}%</span>
+                      <span class="ms-1">({{ quiz.attempts_count }} attempt{{ quiz.attempts_count !== 1 ? 's' : '' }})</span>
                     </p>
                   </div>
                   <div class="card-footer bg-white border-top-0">
@@ -214,40 +208,79 @@ const checkScreenSize = () => {
 }
 
 const filteredQuizzes = computed(() => {
-  let result = [...quizzes.value]
+  let result = [...quizzes.value];
   
-  // Apply search filter
+  // Don't filter by availability here - show all active quizzes
+  // Only filter by search query
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
+    const query = searchQuery.value.toLowerCase();
     result = result.filter(quiz => 
       quiz.title.toLowerCase().includes(query) ||
       quiz.description.toLowerCase().includes(query)
-    )
+    );
   }
   
   // Apply sorting
   result.sort((a, b) => {
-    let comparison = 0
+    let comparison = 0;
     
     switch (sortBy.value) {
       case 'title':
-        comparison = a.title.localeCompare(b.title)
-        break
+        comparison = a.title.localeCompare(b.title);
+        break;
       case 'date':
-        comparison = new Date(a.date_of_quiz) - new Date(b.date_of_quiz)
-        break
+        comparison = new Date(a.date_of_quiz || a.start_date) - new Date(b.date_of_quiz || b.start_date);
+        break;
       case 'duration':
-        comparison = a.time_duration - b.time_duration
-        break
+        comparison = a.time_duration - b.time_duration;
+        break;
       default:
-        comparison = a.title.localeCompare(b.title)
+        comparison = a.title.localeCompare(b.title);
     }
     
-    return sortDirection.value === 'asc' ? comparison : -comparison
-  })
+    return sortDirection.value === 'asc' ? comparison : -comparison;
+  });
   
-  return result
-})
+  return result;
+});
+
+const isQuizExpired = (quiz) => {
+  if (!quiz.end_date || !quiz.end_time) return false
+  
+  try {
+    const now = new Date()
+    const endDateTime = new Date(`${quiz.end_date}T${quiz.end_time}`)
+    return now > endDateTime
+  } catch (e) {
+    console.error('Error checking if quiz is expired:', e)
+    return false
+  }
+}
+
+const getAvailabilityBadgeClass = (quiz) => {
+  if (quiz.is_locked) return 'bg-warning'
+  if (isQuizExpired(quiz)) return 'bg-danger'
+  if (quiz.is_available) return 'bg-success'
+  if (quiz.time_until_start) return 'bg-info'
+  return 'bg-secondary'
+}
+
+const getAvailabilityText = (quiz) => {
+  if (quiz.is_locked) return 'Locked'
+  if (isQuizExpired(quiz)) return 'Expired'
+  if (quiz.is_available) return 'Available'
+  if (quiz.time_until_start) return 'Scheduled'
+  return 'Unavailable'
+}
+
+const formatRelativeTime = (dateString) => {
+  if (!dateString) return 'N/A'
+  try {
+    return formatDistanceToNow(new Date(dateString), { addSuffix: true })
+  } catch (e) {
+    return dateString
+  }
+}
 
 const sortQuizzes = (field) => {
   if (sortBy.value === field) {
@@ -283,13 +316,9 @@ onMounted(async () => {
     const subjectResponse = await api.get(`/subjects/${chapter.value.subject_id}`)
     subject.value = subjectResponse.data
     
-    // Load quizzes
+    // Load quizzes - DON'T simulate data
     const quizzesResponse = await api.get(`/chapters/${chapterId}/quizzes`)
-    quizzes.value = quizzesResponse.data.map(quiz => ({
-      ...quiz,
-      attempts_count: Math.floor(Math.random() * 4), // Simulate attempt count for UI display
-      best_score: Math.random() > 0.5 ? Math.floor(Math.random() * 100) : 0 // Simulate best score for UI display
-    }))
+    quizzes.value = quizzesResponse.data  // FIXED: Don't add simulated data
   } catch (error) {
     console.error('Error loading chapter quizzes:', error)
   } finally {

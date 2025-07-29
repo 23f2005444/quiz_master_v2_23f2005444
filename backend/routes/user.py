@@ -47,7 +47,7 @@ def user_dashboard():
 @user_bp.route('/quizzes/available', methods=['GET'])
 @jwt_required()
 def get_available_quizzes():
-    """Get list of available quizzes for the user"""
+    """Get list of available quizzes for the user with scheduling checks"""
     try:
         # Use cache if available, but don't fail if caching doesn't work
         try:
@@ -58,35 +58,59 @@ def get_available_quizzes():
         except Exception as cache_error:
             print(f"Cache error (continuing without cache): {str(cache_error)}")
 
-        # Get quizzes that are active
+        # Get quizzes that are active and check scheduling
+        from datetime import datetime
+        now = datetime.now()
+        
+        # First, get all the quizzes with their details
         quizzes = db.session.query(
             Quiz.id, 
             Quiz.title, 
             Quiz.description, 
-            Quiz.date_of_quiz, 
-            Quiz.time_duration, 
+            Quiz.start_date,
+            Quiz.start_time,
+            Quiz.end_date,
+            Quiz.end_time,
+            Quiz.time_duration,
+            Quiz.is_locked,
+            Quiz.auto_lock_after_expiry,
             Chapter.name.label('chapter_name'),
             Subject.name.label('subject_name')
         ).join(Chapter, Quiz.chapter_id == Chapter.id)\
          .join(Subject, Chapter.subject_id == Subject.id)\
          .filter(Quiz.is_active == True)\
-         .order_by(Quiz.date_of_quiz.desc())\
-         .limit(5)\
+         .order_by(Quiz.start_date.desc(), Quiz.start_time.desc())\
          .all()
          
-        result = [{
-            'id': q.id,
-            'title': q.title,
-            'description': q.description,
-            'date_of_quiz': q.date_of_quiz.isoformat() if q.date_of_quiz else None,
-            'time_duration': q.time_duration,
-            'chapter_name': q.chapter_name,
-            'subject_name': q.subject_name
-        } for q in quizzes]
+        result = []
+        for q in quizzes:
+            # Create quiz object to use is_available method
+            quiz_obj = Quiz.query.get(q.id)
+            
+            # Only add quizzes that are actually available
+            if quiz_obj and quiz_obj.is_available():
+                quiz_data = {
+                    'id': q.id,
+                    'title': q.title,
+                    'description': q.description,
+                    'start_date': q.start_date.isoformat() if q.start_date else None,
+                    'start_time': q.start_time.strftime('%H:%M') if q.start_time else None,
+                    'end_date': q.end_date.isoformat() if q.end_date else None,
+                    'end_time': q.end_time.strftime('%H:%M') if q.end_time else None,
+                    'time_duration': q.time_duration,
+                    'chapter_name': q.chapter_name,
+                    'subject_name': q.subject_name,
+                    'is_available': True,  # Only available quizzes are included
+                    'is_locked': q.is_locked,
+                    'time_until_start': None, # Already available
+                    'time_until_end': str(quiz_obj.time_until_end()) if quiz_obj and quiz_obj.time_until_end() else None,
+                    'date_of_quiz': q.start_date.isoformat() if q.start_date else datetime.now().date().isoformat()
+                }
+                result.append(quiz_data)
         
         # Try to store in cache, but don't fail if it doesn't work
         try:
-            cache.set('available_quizzes', result, timeout=300)
+            cache.set('available_quizzes', result, timeout=60)  # Shorter cache for scheduling
         except Exception as cache_error:
             print(f"Failed to store in cache: {str(cache_error)}")
             

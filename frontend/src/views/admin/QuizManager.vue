@@ -16,9 +16,7 @@
                     <router-link to="/admin/subjects">Subjects</router-link>
                   </li>
                   <li class="breadcrumb-item">
-                    <router-link :to="`/admin/subjects/${subject?.id}/chapters`">
-                      {{ subject?.name || 'Chapters' }}
-                    </router-link>
+                    <router-link :to="`/admin/subjects/${subject?.id}/chapters`">{{ subject?.name || 'Subject' }}</router-link>
                   </li>
                   <li class="breadcrumb-item active" aria-current="page">
                     {{ chapter?.name || 'Quizzes' }}
@@ -40,40 +38,44 @@
           </div>
           
           <!-- Search & Filter -->
-          <div class="card mb-4 border-0 shadow-sm">
-            <div class="card-body">
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <div class="input-group">
-                    <span class="input-group-text bg-white">
-                      <i class="bi bi-search"></i>
-                    </span>
-                    <input 
-                      v-model="searchQuery" 
-                      type="text" 
-                      class="form-control" 
-                      placeholder="Search quizzes..." 
-                    />
+            <div class="card mb-4 border-0 shadow-sm">
+              <div class="card-body">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <div class="input-group">
+                      <span class="input-group-text bg-white">
+                        <i class="bi bi-search"></i>
+                      </span>
+                      <input 
+                        v-model="searchQuery" 
+                        type="text" 
+                        class="form-control" 
+                        placeholder="Search quizzes..." 
+                      />
+                    </div>
                   </div>
-                </div>
-                <div class="col-md-3">
-                  <select v-model="statusFilter" class="form-select">
-                    <option value="all">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-                <div class="col-md-3 d-flex justify-content-md-end">
-                  <button 
-                    @click="loadQuizzes" 
-                    class="btn btn-outline-secondary d-flex align-items-center"
-                  >
-                    <i class="bi bi-arrow-repeat me-2"></i> Refresh
-                  </button>
+                  <div class="col-md-3">
+                    <select v-model="statusFilter" class="form-select">
+                      <option value="all">All Status</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="locked">Locked</option>
+                      <option value="available">Available</option>
+                      <option value="scheduled">Scheduled</option>
+                      <option value="expired">Expired</option>
+                    </select>
+                  </div>
+                  <div class="col-md-3 d-flex justify-content-md-end">
+                    <button 
+                      @click="loadQuizzes"
+                      class="btn btn-outline-secondary d-flex align-items-center"
+                    >
+                      <i class="bi bi-arrow-repeat me-2"></i> Refresh
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
           
           <!-- Quizzes Table -->
           <div class="card border-0 shadow-sm">
@@ -86,24 +88,30 @@
               
               <div v-else class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                  <thead class="table-light">
-                    <tr>
-                      <th scope="col">Title</th>
-                      <th scope="col">Date</th>
-                      <th scope="col">Duration</th>
-                      <th scope="col">Passing Score</th>
-                      <th scope="col">Total Marks</th>
-                      <th scope="col">Status</th>
-                      <th scope="col" class="text-end">Actions</th>
-                    </tr>
-                  </thead>
+                    <thead class="table-light">
+                      <tr>
+                        <th scope="col">Title</th>
+                        <th scope="col">Description</th>
+                        <th scope="col">Schedule</th>
+                        <th scope="col">Duration</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Availability</th>
+                        <th scope="col" class="text-end">Actions</th>
+                      </tr>
+                    </thead>
                   <tbody>
                     <tr v-for="quiz in filteredQuizzes" :key="quiz.id">
                       <td class="fw-medium">{{ quiz.title }}</td>
-                      <td>{{ formatDateSimple(quiz.date_of_quiz) }}</td>
+                      <td>{{ truncateText(quiz.description, 40) }}</td>
+                      <td>
+                        <div class="small">
+                          <div>{{ formatDateTime(quiz.start_date, quiz.start_time) }}</div>
+                          <div v-if="quiz.end_date" class="text-muted">
+                            to {{ formatDateTime(quiz.end_date, quiz.end_time) }}
+                          </div>
+                        </div>
+                      </td>
                       <td>{{ formatDuration(quiz.time_duration) }}</td>
-                      <td>{{ quiz.passing_score }}</td>
-                      <td>{{ quiz.total_marks }}</td>
                       <td>
                         <span
                           :class="[
@@ -115,13 +123,28 @@
                         </span>
                       </td>
                       <td>
+                        <div class="availability-status">
+                          <span
+                            :class="[
+                              'badge',
+                              getAvailabilityBadgeClass(quiz)
+                            ]"
+                          >
+                            {{ getAvailabilityText(quiz) }}
+                          </span>
+                          <div v-if="getCountdownText(quiz)" class="small text-muted mt-1">
+                            {{ getCountdownText(quiz) }}
+                          </div>
+                        </div>
+                      </td>
+                      <td>
                         <div class="d-flex justify-content-end gap-2">
                           <router-link 
                             :to="`/admin/quizzes/${quiz.id}/questions`"
                             class="btn btn-sm btn-outline-primary"
                             title="Manage Questions"
                           >
-                            <i class="bi bi-list-ul"></i>
+                            <i class="bi bi-question-circle"></i>
                           </router-link>
                           <button
                             @click="openEditModal(quiz)"
@@ -129,6 +152,14 @@
                             title="Edit Quiz"
                           >
                             <i class="bi bi-pencil"></i>
+                          </button>
+                          <button
+                            @click="toggleQuizLock(quiz, !quiz.is_locked)"
+                            :class="quiz.is_locked ? 'btn-outline-success' : 'btn-outline-warning'"
+                            class="btn btn-sm"
+                            :title="quiz.is_locked ? 'Unlock Quiz' : 'Lock Quiz'"
+                          >
+                            <i :class="quiz.is_locked ? 'bi-unlock' : 'bi-lock'"></i>
                           </button>
                           <button
                             @click="confirmDelete(quiz)"
@@ -158,7 +189,7 @@
       </div>
     </div>
     
-    <!-- Quiz Modal -->
+    <!-- Enhanced Quiz Modal with Scheduling -->
     <div 
       class="modal fade" 
       id="quizModal" 
@@ -182,6 +213,7 @@
           </div>
           <div class="modal-body">
             <form @submit.prevent="saveQuiz">
+              <!-- Basic Information -->
               <div class="row mb-3">
                 <div class="col-12">
                   <label for="quizTitle" class="form-label">Quiz Title</label>
@@ -206,18 +238,62 @@
                 ></textarea>
               </div>
               
+              <!-- Scheduling Section -->
+              <h6 class="mb-3 text-primary">
+                <i class="bi bi-calendar-clock me-2"></i>Quiz Scheduling
+              </h6>
+              
               <div class="row mb-3">
                 <div class="col-md-6">
-                  <label for="quizDate" class="form-label">Date</label>
+                  <label for="startDate" class="form-label">Start Date</label>
                   <input 
                     type="date" 
                     class="form-control" 
-                    id="quizDate" 
-                    v-model="quizForm.date_of_quiz"
+                    id="startDate" 
+                    v-model="quizForm.start_date"
                     required
                   >
                 </div>
                 <div class="col-md-6">
+                  <label for="startTime" class="form-label">Start Time</label>
+                   <input 
+                    type="time" 
+                    class="form-control" 
+                    id="startTime" 
+                    v-model="quizForm.start_time"
+                    required
+                  >
+                </div>
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label for="endDate" class="form-label">End Date (Optional)</label>
+                   <input 
+                    type="date" 
+                    class="form-control" 
+                    id="endDate" 
+                    v-model="quizForm.end_date"
+                  >
+                </div>
+                <div class="col-md-6">
+                  <label for="endTime" class="form-label">End Time (Optional)</label>
+                  <input 
+                    type="time" 
+                    class="form-control" 
+                    id="endTime" 
+                    v-model="quizForm.end_time"
+                  >
+                </div>
+              </div>
+              
+              <!-- Quiz Settings -->
+              <h6 class="mb-3 text-primary">
+                <i class="bi bi-gear me-2"></i>Quiz Settings
+              </h6>
+              
+              <div class="row mb-3">
+                <div class="col-md-4">
                   <label for="quizDuration" class="form-label">Duration (minutes)</label>
                   <input 
                     type="number" 
@@ -228,22 +304,19 @@
                     required
                   >
                 </div>
-              </div>
-              
-              <div class="row mb-3">
-                <div class="col-md-6">
-                  <label for="quizPassing" class="form-label">Passing Score</label>
+                <div class="col-md-4">
+                  <label for="quizPassing" class="form-label">Passing Score (%)</label>
                   <input 
                     type="number" 
                     class="form-control" 
                     id="quizPassing" 
                     v-model="quizForm.passing_score"
-                    min="1"
-                    :max="quizForm.total_marks"
+                    min="0"
+                    max="100"
                     required
                   >
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                   <label for="quizTotal" class="form-label">Total Marks</label>
                   <input 
                     type="number" 
@@ -256,17 +329,35 @@
                 </div>
               </div>
               
-              <div class="form-check form-switch mb-3">
-                <input 
-                  class="form-check-input" 
-                  type="checkbox" 
-                  role="switch" 
-                  id="quizStatus" 
-                  v-model="quizForm.is_active"
-                >
-                <label class="form-check-label" for="quizStatus">
-                  {{ quizForm.is_active ? 'Active' : 'Inactive' }}
-                </label>
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <div class="form-check form-switch">
+                    <input 
+                      class="form-check-input" 
+                      type="checkbox" 
+                      role="switch" 
+                      id="autoLock" 
+                      v-model="quizForm.auto_lock_after_expiry"
+                    >
+                    <label class="form-check-label" for="autoLock">
+                      Auto-lock after expiry
+                    </label>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-check form-switch">
+                    <input 
+                      class="form-check-input" 
+                      type="checkbox" 
+                      role="switch" 
+                      id="quizStatus" 
+                      v-model="quizForm.is_active"
+                    >
+                    <label class="form-check-label" for="quizStatus">
+                      {{ quizForm.is_active ? 'Active' : 'Inactive' }}
+                    </label>
+                  </div>
+                </div>
               </div>
               
               <div class="d-flex justify-content-end">
@@ -292,8 +383,14 @@
       </div>
     </div>
     
-    <!-- Delete Confirmation Modal -->
-    <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true" ref="deleteModalRef">
+    <!-- Delete Confirmation Modal remains the same -->
+    <div 
+      class="modal fade" 
+      id="deleteModal" 
+      tabindex="-1" 
+      aria-hidden="true" 
+      ref="deleteModalRef"
+    >
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header">
@@ -334,7 +431,7 @@ import { useApi } from '@/composables/useApi'
 import { useRoute } from 'vue-router'
 import AdminNavbar from '@/components/admin/AdminNavbar.vue'
 import AdminSidebar from '@/components/admin/AdminSidebar.vue'
-import { formatDistanceToNow, format } from 'date-fns'
+import { formatDistanceToNow, format, parseISO, isAfter, isBefore } from 'date-fns'
 
 const api = useApi()
 const route = useRoute()
@@ -358,15 +455,20 @@ let quizModalInstance = null
 let deleteModalInstance = null
 
 const today = new Date().toISOString().split('T')[0]
+const currentTime = new Date().toTimeString().slice(0, 5)
 
 const quizForm = ref({
   id: null,
   title: '',
   description: '',
-  date_of_quiz: today, // Already a string in YYYY-MM-DD format
-  time_duration: 30,   // Ensure this is a number
-  passing_score: 60,   // Ensure this is a number
-  total_marks: 100,    // Ensure this is a number
+  start_date: today,
+  start_time: currentTime,
+  end_date: '',
+  end_time: '',
+  time_duration: 30,
+  passing_score: 60,
+  total_marks: 100,
+  auto_lock_after_expiry: true,
   is_active: true
 })
 
@@ -384,8 +486,24 @@ const filteredQuizzes = computed(() => {
   
   // Apply status filter
   if (statusFilter.value !== 'all') {
-    const isActive = statusFilter.value === 'active'
-    filtered = filtered.filter(quiz => quiz.is_active === isActive)
+    filtered = filtered.filter(quiz => {
+      switch (statusFilter.value) {
+        case 'active':
+          return quiz.is_active
+        case 'inactive':
+          return !quiz.is_active
+        case 'locked':
+          return quiz.is_locked
+        case 'available':
+          return quiz.is_available
+        case 'scheduled':
+          return quiz.time_until_start !== null
+        case 'expired':
+          return quiz.end_date && quiz.end_time && isQuizExpired(quiz)
+        default:
+          return true
+      }
+    })
   }
   
   return filtered
@@ -395,7 +513,7 @@ onMounted(async () => {
   try {
     await Promise.all([loadChapter(), loadQuizzes()])
     
-    // Initialize Bootstrap modals after a small delay to ensure DOM is ready
+    // Initialize Bootstrap modals
     setTimeout(() => {
       if (quizModalRef.value) {
         quizModalInstance = new bootstrap.Modal(quizModalRef.value)
@@ -404,7 +522,7 @@ onMounted(async () => {
       if (deleteModalRef.value) {
         deleteModalInstance = new bootstrap.Modal(deleteModalRef.value)
       }
-    }, 100);
+    }, 100)
   } catch (error) {
     console.error('Error in onMounted:', error)
   }
@@ -415,7 +533,6 @@ const loadChapter = async () => {
     const response = await api.get(`/admin/chapters/${chapterId}`)
     chapter.value = response.data
     
-    // Load subject info
     if (chapter.value && chapter.value.subject_id) {
       const subjectResponse = await api.get(`/admin/subjects/${chapter.value.subject_id}`)
       subject.value = subjectResponse.data
@@ -442,10 +559,7 @@ const openCreateModal = () => {
   resetForm()
   
   if (quizModalInstance) {
-    quizModalInstance.show();
-  } else if (quizModalRef.value) {
-    quizModalInstance = new bootstrap.Modal(quizModalRef.value);
-    quizModalInstance.show();
+    quizModalInstance.show()
   }
 }
 
@@ -455,29 +569,19 @@ const openEditModal = (quiz) => {
     id: quiz.id,
     title: quiz.title,
     description: quiz.description,
-    date_of_quiz: quiz.date_of_quiz.split('T')[0],
-    time_duration: quiz.time_duration,
-    passing_score: quiz.passing_score,
-    total_marks: quiz.total_marks,
-    is_active: quiz.is_active
+    start_date: quiz.start_date || today,
+    start_time: quiz.start_time || currentTime,
+    end_date: quiz.end_date || '',
+    end_time: quiz.end_time || '',
+    time_duration: parseInt(quiz.time_duration) || 30,
+    passing_score: parseInt(quiz.passing_score) || 60,
+    total_marks: parseInt(quiz.total_marks) || 100,
+    auto_lock_after_expiry: quiz.auto_lock_after_expiry !== false, // Default to true
+    is_active: quiz.is_active !== false // Default to true
   }
   
   if (quizModalInstance) {
-    quizModalInstance.show();
-  } else if (quizModalRef.value) {
-    quizModalInstance = new bootstrap.Modal(quizModalRef.value);
-    quizModalInstance.show();
-  }
-}
-
-const confirmDelete = (quiz) => {
-  quizToDelete.value = quiz
-  
-  if (deleteModalInstance) {
-    deleteModalInstance.show();
-  } else if (deleteModalRef.value) {
-    deleteModalInstance = new bootstrap.Modal(deleteModalRef.value);
-    deleteModalInstance.show();
+    quizModalInstance.show()
   }
 }
 
@@ -485,56 +589,139 @@ const saveQuiz = async () => {
   isSubmitting.value = true
   
   try {
-    // Format the date properly for SQLite
     const formattedData = {
-      ...quizForm.value,
-      // Make sure date is in ISO format 'YYYY-MM-DD'
-      date_of_quiz: quizForm.value.date_of_quiz,
-      // Ensure these are numbers, not strings
+      title: quizForm.value.title,
+      description: quizForm.value.description,
+      start_date: quizForm.value.start_date,
+      start_time: quizForm.value.start_time,
+      end_date: quizForm.value.end_date || null,
+      end_time: quizForm.value.end_time || null,
       time_duration: parseInt(quizForm.value.time_duration),
       passing_score: parseInt(quizForm.value.passing_score),
-      total_marks: parseInt(quizForm.value.total_marks)
+      total_marks: parseInt(quizForm.value.total_marks),
+      auto_lock_after_expiry: Boolean(quizForm.value.auto_lock_after_expiry),
+      is_active: Boolean(quizForm.value.is_active)
     }
     
+    console.log('Saving quiz with data:', formattedData)
+    
     if (isEditing.value) {
-      await api.put(`/admin/quizzes/${formattedData.id}`, formattedData)
+      await api.put(`/admin/quizzes/${quizForm.value.id}`, formattedData)
     } else {
       await api.post(`/admin/chapters/${chapterId}/quizzes`, formattedData)
     }
     
     await loadQuizzes()
     
-    // Close the modal using the instance directly
     if (quizModalInstance) {
-      quizModalInstance.hide();
-    } else if (quizModalRef.value) {
-      // Try to create a new instance if none exists
-      const newModal = new bootstrap.Modal(quizModalRef.value);
-      newModal.hide();
-    } else {
-      // Manual fallback
-      const modalElement = document.querySelector('#quizModal');
-      if (modalElement) {
-        modalElement.classList.remove('show');
-        modalElement.style.display = 'none';
-        document.body.classList.remove('modal-open');
-        
-        // Remove backdrop
-        const backdrops = document.getElementsByClassName('modal-backdrop');
-        if (backdrops.length > 0) {
-          for (let i = 0; i < backdrops.length; i++) {
-            if (backdrops[i].parentNode) {
-              backdrops[i].parentNode.removeChild(backdrops[i]);
-            }
-          }
-        }
-      }
+      quizModalInstance.hide()
     }
   } catch (error) {
     console.error('Error saving quiz:', error)
-    alert('Failed to save quiz. Please try again.')
+    
+    // Show more specific error message
+    const errorMessage = error.response?.data?.msg || error.message || 'Failed to save quiz'
+    alert(`Error: ${errorMessage}`)
   } finally {
     isSubmitting.value = false
+  }
+}
+
+const toggleQuizLock = async (quiz, lockState) => {
+  try {
+    const endpoint = lockState ? 'lock' : 'unlock'
+    await api.put(`/admin/quizzes/${quiz.id}/${endpoint}`)
+    await loadQuizzes()
+  } catch (error) {
+    console.error('Error toggling quiz lock:', error)
+    alert('Failed to toggle quiz lock. Please try again.')
+  }
+}
+
+const resetForm = () => {
+  quizForm.value = {
+    id: null,
+    title: '',
+    description: '',
+    start_date: today,
+    start_time: currentTime,
+    end_date: '',
+    end_time: '',
+    time_duration: 30,
+    passing_score: 60,
+    total_marks: 100,
+    auto_lock_after_expiry: true,
+    is_active: true
+  }
+}
+
+const getAvailabilityBadgeClass = (quiz) => {
+  if (quiz.is_locked) return 'text-bg-warning'
+  if (quiz.is_available) return 'text-bg-success'
+  if (quiz.time_until_start) return 'text-bg-info'
+  if (isQuizExpired(quiz)) return 'text-bg-danger'
+  return 'text-bg-secondary'
+}
+
+const getAvailabilityText = (quiz) => {
+  if (quiz.is_locked) return 'Locked'
+  if (quiz.is_available) return 'Available'
+  if (quiz.time_until_start) return 'Scheduled'
+  if (isQuizExpired(quiz)) return 'Expired'
+  return 'Inactive'
+}
+
+const getCountdownText = (quiz) => {
+  if (quiz.time_until_start) {
+    return `Starts in ${quiz.time_until_start}`
+  }
+  if (quiz.time_until_end) {
+    return `Ends in ${quiz.time_until_end}`
+  }
+  return ''
+}
+
+const isQuizExpired = (quiz) => {
+  if (!quiz.end_date || !quiz.end_time) return false
+  const now = new Date()
+  const endDateTime = new Date(`${quiz.end_date}T${quiz.end_time}`)
+  return isAfter(now, endDateTime)
+}
+
+const formatDateTime = (date, time) => {
+  if (!date) return 'Not set'
+  try {
+    const dateTimeStr = time ? `${date}T${time}` : date
+    return format(parseISO(dateTimeStr), 'MMM dd, yyyy HH:mm')
+  } catch (e) {
+    return `${date} ${time || ''}`
+  }
+}
+
+const formatDuration = (minutes) => {
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  
+  if (hours === 0) {
+    return `${mins} min${mins !== 1 ? 's' : ''}`
+  } else {
+    return `${hours} hr${hours !== 1 ? 's' : ''} ${mins} min${mins !== 1 ? 's' : ''}`
+  }
+}
+
+const truncateText = (text, maxLength) => {
+  if (text.length <= maxLength) return text
+  return text.substring(0, maxLength) + '...'
+}
+
+const confirmDelete = (quiz) => {
+  quizToDelete.value = quiz
+  
+  if (deleteModalInstance) {
+    deleteModalInstance.show()
+  } else if (deleteModalRef.value) {
+    deleteModalInstance = new bootstrap.Modal(deleteModalRef.value)
+    deleteModalInstance.show()
   }
 }
 
@@ -547,82 +734,18 @@ const deleteQuiz = async () => {
     await api.delete(`/admin/quizzes/${quizToDelete.value.id}`)
     await loadQuizzes()
     
-    // Close the modal using the instance directly
+    // Close the modal
     if (deleteModalInstance) {
-      deleteModalInstance.hide();
+      deleteModalInstance.hide()
     } else if (deleteModalRef.value) {
-      // Try to create a new instance if none exists
-      const newModal = new bootstrap.Modal(deleteModalRef.value);
-      newModal.hide();
-    } else {
-      // Manual fallback
-      const modalElement = document.querySelector('#deleteModal');
-      if (modalElement) {
-        modalElement.classList.remove('show');
-        modalElement.style.display = 'none';
-        document.body.classList.remove('modal-open');
-        
-        // Remove backdrop
-        const backdrops = document.getElementsByClassName('modal-backdrop');
-        if (backdrops.length > 0) {
-          for (let i = 0; i < backdrops.length; i++) {
-            if (backdrops[i].parentNode) {
-              backdrops[i].parentNode.removeChild(backdrops[i]);
-            }
-          }
-        }
-      }
+      const newModal = new bootstrap.Modal(deleteModalRef.value)
+      newModal.hide()
     }
   } catch (error) {
     console.error('Error deleting quiz:', error)
     alert('Failed to delete quiz. Please try again.')
   } finally {
     isDeleting.value = false
-  }
-}
-
-const resetForm = () => {
-  quizForm.value = {
-    id: null,
-    title: '',
-    description: '',
-    date_of_quiz: new Date().toISOString().split('T')[0], // Always get today's date
-    time_duration: 30,
-    passing_score: 60,
-    total_marks: 100,
-    is_active: true
-  }
-}
-
-const truncateText = (text, maxLength) => {
-  if (text.length <= maxLength) return text
-  return text.substring(0, maxLength) + '...'
-}
-
-const formatDate = (dateString) => {
-  try {
-    return formatDistanceToNow(new Date(dateString), { addSuffix: true })
-  } catch (e) {
-    return dateString
-  }
-}
-
-const formatDateSimple = (dateString) => {
-  try {
-    return format(new Date(dateString), 'MMM dd, yyyy')
-  } catch (e) {
-    return dateString
-  }
-}
-
-const formatDuration = (minutes) => {
-  const hours = Math.floor(minutes / 60)
-  const mins = minutes % 60
-  
-  if (hours === 0) {
-    return `${mins} min${mins !== 1 ? 's' : ''}`
-  } else {
-    return `${hours} hr${hours !== 1 ? 's' : ''} ${mins} min${mins !== 1 ? 's' : ''}`
   }
 }
 </script>
@@ -637,10 +760,8 @@ const formatDuration = (minutes) => {
   min-height: calc(100vh - 56px);
 }
 
-@media (max-width: 992px) {
-  .content {
-    min-height: auto;
-  }
+.availability-status {
+  min-width: 120px;
 }
 
 .table th {
@@ -650,5 +771,11 @@ const formatDuration = (minutes) => {
 .btn-group-sm > .btn,
 .btn-sm {
   padding: 0.25rem 0.5rem;
+}
+
+@media (max-width: 992px) {
+  .content {
+    min-height: auto;
+  }
 }
 </style>

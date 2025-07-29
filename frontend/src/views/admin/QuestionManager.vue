@@ -573,16 +573,33 @@ const getOptionLetter = (index) => {
 }
 
 const formatDateSimple = (dateString) => {
+  // Handle null, undefined, or empty strings
+  if (!dateString || dateString === 'null' || dateString === 'undefined') {
+    return 'N/A'
+  }
+  
   try {
-    return format(new Date(dateString), 'MMM dd, yyyy')
+    // Try to parse the date string
+    const date = new Date(dateString)
+    
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date string:', dateString)
+      return 'Invalid Date'
+    }
+    
+    return format(date, 'MMM dd, yyyy')
   } catch (e) {
-    console.error('Error formatting date:', e)
-    return dateString
+    console.error('Error formatting date:', e, 'Date string:', dateString)
+    return 'Invalid Date'
   }
 }
 
 const formatDuration = (minutes) => {
-  if (!minutes) return '0 mins'
+  // Handle null, undefined, or invalid numbers
+  if (!minutes || isNaN(minutes) || minutes <= 0) {
+    return '0 mins'
+  }
   
   const hours = Math.floor(minutes / 60)
   const mins = minutes % 60

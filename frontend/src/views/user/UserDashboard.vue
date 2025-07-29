@@ -127,6 +127,10 @@ const loadRecentQuizzes = async () => {
   }
 }
 
+const filteredAvailableQuizzes = computed(() => {
+  return recentQuizzes.value.filter(quiz => quiz.is_available === true);
+});
+
 const loadSubjects = async () => {
   try {
     const response = await api.get('/subjects/details')
@@ -242,7 +246,7 @@ const formatRelativeTime = (dateString) => {
               <div class="card bg-warning text-white h-100">
                 <div class="card-body">
                   <h6 class="card-title">Available</h6>
-                  <h2 class="card-text">{{ stats.availableQuizzes }}</h2>
+                  <h2 class="card-text">{{ availableQuizCount }}</h2>
                   <i class="bi bi-lightning position-absolute top-50 end-0 me-3 opacity-50" style="font-size: 2rem;"></i>
                 </div>
               </div>
@@ -306,23 +310,28 @@ const formatRelativeTime = (dateString) => {
                 <div class="card-body p-0">
                   <div class="list-group list-group-flush">
                     <div v-if="recentQuizzes.length === 0" class="text-center py-4 text-muted">
-                      <i class="bi bi-clipboard-data fs-1 mb-2"></i>
-                      <p>No quizzes available at the moment</p>
+                      <i class="bi bi-lightning fs-1 mb-2"></i>
+                      <p>No available quizzes right now</p>
                     </div>
                     
                     <router-link 
-                      v-for="quiz in recentQuizzes" 
-                      :key="quiz.id" 
+                      v-for="quiz in filteredAvailableQuizzes" 
+                      :key="quiz.id"
                       :to="`/quizzes/${quiz.id}`"
-                      class="list-group-item list-group-item-action"
+                      class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3"
                     >
-                      <div class="d-flex w-100 justify-content-between align-items-start">
+                      <div>
                         <h6 class="mb-1">{{ quiz.title }}</h6>
-                        <small>{{ formatDate(quiz.date_of_quiz) }}</small>
+                        <p class="mb-1 small text-muted">{{ quiz.subject_name }} - {{ quiz.chapter_name }}</p>
+                        <div class="d-flex align-items-center">
+                          <span class="badge bg-primary me-2">{{ quiz.time_duration }} mins</span>
+                          <span v-if="quiz.time_until_end" class="small text-danger">
+                            <i class="bi bi-clock me-1"></i> Expires {{ formatRelativeTime(quiz.end_date) }}
+                          </span>
+                        </div>
                       </div>
-                      <div class="d-flex justify-content-between align-items-center">
-                        <p class="mb-1 text-muted small">{{ quiz.chapter_name }} ({{ quiz.subject_name }})</p>
-                        <span class="badge bg-info">{{ quiz.time_duration }} min</span>
+                      <div>
+                        <i class="bi bi-chevron-right text-muted"></i>
                       </div>
                     </router-link>
                   </div>
