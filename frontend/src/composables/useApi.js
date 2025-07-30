@@ -56,12 +56,12 @@ export function useApi() {
   const error = ref(null)
   const isLoading = ref(false)
   
-  // Generic GET request
-  const get = async (url) => {
+  // Generic GET request with optional config
+  const get = async (url, config = {}) => {
     try {
       isLoading.value = true
       error.value = null
-      return await apiClient.get(url)
+      return await apiClient.get(url, config)
     } catch (err) {
       error.value = err.response?.data?.msg || err.message || 'An error occurred'
       throw err

@@ -220,6 +220,11 @@ def get_quiz(quiz_id):
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+# def export_user_quiz_attempts(user_id):
+#     """Export user quiz attempts - placeholder function"""
+#     # This function will be implemented in the export tasks
+#     pass
 
 @quiz_bp.route('/quizzes/<int:quiz_id>/questions/count', methods=['GET'])
 @jwt_required()
@@ -279,7 +284,7 @@ def create_attempt(quiz_id):
             'id': new_attempt.id,
             'quiz_id': new_attempt.quiz_id,
             'status': new_attempt.status,
-            'time_limit': quiz.time_duration * 60  # Convert to seconds for frontend
+            'time_limit': quiz.time_duration * 60
         }), 201
         
     except Exception as e:

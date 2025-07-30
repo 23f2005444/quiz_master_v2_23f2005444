@@ -1,3 +1,4 @@
+<!-- filepath: d:\Projects\MAD 2 Project\quiz_master_v2_23f2005444\frontend\src\views\user\QuizAttemptList.vue -->
 <template>
   <div class="page-layout">
     <!-- Overlay for mobile when sidebar is visible -->
@@ -55,8 +56,14 @@
                   <i class="bi bi-arrow-repeat me-2"></i> Refresh
                 </button>
                 
-                <button class="btn btn-outline-success ms-2" @click="exportAttempts">
-                  <i class="bi bi-file-earmark-excel me-2"></i> Export
+                <button 
+                  class="btn btn-outline-success ms-2" 
+                  @click="startExport"
+                  :disabled="exportState.isExporting"
+                >
+                  <span v-if="exportState.isExporting" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  <i v-else class="bi bi-file-earmark-excel me-2"></i>
+                  {{ exportState.isExporting ? 'Exporting...' : 'Export CSV' }}
                 </button>
               </div>
             </div>
@@ -164,6 +171,7 @@
             </div>
           </div>
           
+          <!-- Pagination (when there are more than 10 items) -->
           <div v-if="filteredAttempts.length > 10" class="d-flex justify-content-center mt-4">
             <nav aria-label="Quiz attempts pagination">
               <ul class="pagination">
@@ -181,34 +189,26 @@
           </div>
         </div>
         
-        <!-- Export Status Modal -->
-        <div class="modal fade" id="exportStatusModal" tabindex="-1" ref="exportModalRef">
+        <!-- Export Success Modal -->
+        <div class="modal fade" id="exportSuccessModal" tabindex="-1" aria-labelledby="exportSuccessModalLabel" aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
               <div class="modal-header">
-                <h5 class="modal-title">Export Quiz Attempts</h5>
+                <h5 class="modal-title" id="exportSuccessModalLabel">
+                  <i class="bi bi-check-circle-fill text-success me-2"></i>
+                  Export Successful
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
-              <div class="modal-body">
-                <div v-if="exporting" class="text-center p-3">
-                  <div class="spinner-border text-primary mb-3" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                  </div>
-                  <p class="mb-0">Your report is being generated. You'll be notified when it's ready to download.</p>
+              <div class="modal-body text-center">
+                <div class="mb-3">
+                  <i class="bi bi-file-earmark-excel-fill text-success" style="font-size: 3rem;"></i>
                 </div>
-                <div v-else-if="exportSuccess" class="text-center p-3">
-                  <div class="bg-success text-white rounded-circle export-icon-container mx-auto mb-3">
-                    <i class="bi bi-check-lg export-icon"></i>
-                  </div>
-                  <h5>Export Successful!</h5>
-                  <p>Your report has been generated and is ready to download.</p>
-                </div>
+                <h6>Your quiz attempts have been exported successfully!</h6>
+                <p class="text-muted mb-0">The CSV file has been downloaded to your device.</p>
               </div>
               <div class="modal-footer">
-                <button v-if="!exporting" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <a v-if="exportSuccess" href="#" class="btn btn-primary">
-                  <i class="bi bi-download me-2"></i> Download CSV
-                </a>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
               </div>
             </div>
           </div>
@@ -224,6 +224,7 @@ import UserNavbar from '@/components/user/UserNavbar.vue'
 import UserSidebar from '@/components/user/UserSidebar.vue'
 import { useApi } from '@/composables/useApi'
 import { format } from 'date-fns'
+// Add Bootstrap import at the top
 import * as bootstrap from 'bootstrap'
 
 const api = useApi()
@@ -233,10 +234,13 @@ const searchQuery = ref('')
 const statusFilter = ref('all')
 const sidebarVisible = ref(false)
 const isMobile = ref(false)
-const exportModalRef = ref(null)
-let exportModal = null
-const exporting = ref(false)
-const exportSuccess = ref(false)
+
+// Simplified export state - no complex async handling
+const exportState = ref({
+  isExporting: false,
+  error: null,
+  success: false
+})
 
 const filteredAttempts = computed(() => {
   let filtered = [...attempts.value]
@@ -275,17 +279,8 @@ const checkScreenSize = () => {
 }
 
 onMounted(async () => {
-  // Check screen size initially
   checkScreenSize()
-  
-  // Add resize listener
   window.addEventListener('resize', checkScreenSize)
-  
-  // Initialize export modal
-  if (exportModalRef.value) {
-    exportModal = new bootstrap.Modal(exportModalRef.value)
-  }
-  
   await loadAttempts()
 })
 
@@ -297,36 +292,87 @@ const loadAttempts = async () => {
   loading.value = true
   try {
     const response = await api.get('/user/attempts')
-    attempts.value = response.data
+    attempts.value = response.data || []
   } catch (error) {
     console.error('Error loading attempts:', error)
+    attempts.value = []
   } finally {
     loading.value = false
   }
 }
 
-const exportAttempts = async () => {
-  exporting.value = true
-  exportSuccess.value = false
-  
-  if (exportModal) {
-    exportModal.show()
-  }
+// Simplified synchronous export function
+const startExport = async () => {
+  if (exportState.value.isExporting) return
   
   try {
-    // Simulate API call to trigger background job
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    exportState.value.isExporting = true
+    exportState.value.error = null
+    exportState.value.success = false
+    
+    console.log('Starting CSV export...')
+    
+    // Check if user has any attempts to export
+    if (filteredAttempts.value.length === 0) {
+      alert('No quiz attempts found to export.')
+      return
+    }
+    
+    // Make the export request with blob response type
+    const response = await api.post('/exports/user/quiz-attempts', {}, {
+      responseType: 'blob'
+    })
+    
+    // Create download link immediately
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-')
+    const filename = `quiz_attempts_${timestamp}.csv`
+    
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
     
     // Show success state
-    exporting.value = false
-    exportSuccess.value = true
+    exportState.value.success = true
+    showSuccessModal()
+    
+    console.log('Export completed successfully')
+    
   } catch (error) {
-    console.error('Error exporting attempts:', error)
-    exporting.value = false
+    console.error('Export error:', error)
+    exportState.value.error = error.response?.data?.error || error.message || 'Failed to export data'
+    
+    // Show user-friendly error message
+    alert(`Export failed: ${exportState.value.error}`)
+  } finally {
+    exportState.value.isExporting = false
+  }
+}
+
+// FIXED: Use proper Bootstrap import instead of require()
+const showSuccessModal = () => {
+  try {
+    // Use imported Bootstrap instead of require()
+    const modalElement = document.getElementById('exportSuccessModal')
+    if (modalElement) {
+      const modal = new bootstrap.Modal(modalElement)
+      modal.show()
+    }
+  } catch (error) {
+    console.error('Error showing success modal:', error)
+    // Fallback to simple alert
+    alert('Export completed successfully! Your CSV file has been downloaded.')
   }
 }
 
 const formatDate = (dateString) => {
+  if (!dateString) return 'N/A'
   try {
     return format(new Date(dateString), 'MMM dd, yyyy, h:mm a')
   } catch (e) {
@@ -335,7 +381,7 @@ const formatDate = (dateString) => {
 }
 
 const formatDuration = (minutes) => {
-  if (!minutes) return '0 mins'
+  if (!minutes || minutes <= 0) return '0 mins'
   
   const hours = Math.floor(minutes / 60)
   const mins = minutes % 60
@@ -408,18 +454,6 @@ const formatDuration = (minutes) => {
   font-size: 3rem;
   margin-bottom: 1.5rem;
   color: #dee2e6;
-}
-
-.export-icon-container {
-  width: 60px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.export-icon {
-  font-size: 1.75rem;
 }
 
 /* Sidebar backdrop overlay for mobile */
