@@ -56,14 +56,12 @@ def rate_limit(limit=30, per=60, by="ip"):
                         "error": "Rate limit exceeded",
                         "limit": limit,
                         "per": per,
-                        "retry_after": per - (now % per)  # Time until rate limit reset
+                        "retry_after": per - (now % per) 
                     }
                     return jsonify(response), 429
             except Exception as e:
                 logger.error(f"Error in rate limiting for {func.__name__}: {str(e)}")
-                # Continue without rate limiting if there's an error
             
-            # Call the original function
             return func(*args, **kwargs)
             
         return wrapped
@@ -88,7 +86,6 @@ def cached(timeout=300, key_prefix='view', user_specific=False):
                 # Build cache key
                 cache_key = f"{key_prefix}:{func.__name__}"
                 
-                # Add function arguments to cache key
                 arg_strings = [str(arg) for arg in args[1:]]  # Skip self/cls
                 kwarg_strings = [f"{k}={v}" for k, v in kwargs.items()]
                 args_key = "_".join(arg_strings + kwarg_strings)
@@ -96,7 +93,6 @@ def cached(timeout=300, key_prefix='view', user_specific=False):
                 if args_key:
                     cache_key = f"{cache_key}:{args_key}"
                     
-                # Add user ID for user-specific caching
                 if user_specific:
                     try:
                         user_id = get_jwt_identity()
@@ -105,7 +101,6 @@ def cached(timeout=300, key_prefix='view', user_specific=False):
                     except Exception:
                         logger.debug("Could not get user identity for cache key")
                 
-                # Make sure cache is available
                 if cache:
                     # Try to get from cache
                     try:
@@ -118,7 +113,6 @@ def cached(timeout=300, key_prefix='view', user_specific=False):
                 # Generate the response
                 result = func(*args, **kwargs)
                 
-                # Try to cache the response
                 if cache:
                     try:
                         cache.set(cache_key, result, timeout=timeout)
@@ -129,7 +123,6 @@ def cached(timeout=300, key_prefix='view', user_specific=False):
                 
             except Exception as e:
                 logger.error(f"Unexpected error in cached decorator for {func.__name__}: {str(e)}")
-                # Fall back to uncached function call
                 return func(*args, **kwargs)
             
         return wrapped

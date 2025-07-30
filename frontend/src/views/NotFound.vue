@@ -47,7 +47,6 @@ const isAdmin = ref(false)
 const isAuthenticated = ref(false)
 const buttonText = ref('Home')
 
-// Safely attempt to get auth state
 onMounted(() => {
   try {
     if (auth && typeof auth.isAdmin !== 'undefined') {
@@ -58,7 +57,6 @@ onMounted(() => {
       isAuthenticated.value = auth.isAuthenticated
     }
     
-    // Update button text based on auth state
     buttonText.value = isAdmin.value ? 'Admin Dashboard' : 
                        isAuthenticated.value ? 'Dashboard' : 'Home'
   } catch (error) {
@@ -155,7 +153,6 @@ const goBack = () => {
   }
 }
 
-/* Responsive adjustments */
 @media (max-width: 576px) {
   .error-badge {
     width: 120px;

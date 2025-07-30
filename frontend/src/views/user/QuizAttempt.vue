@@ -58,7 +58,6 @@ const progressColorClass = computed(() => {
   return 'bg-success'
 })
 
-// Watch for confirmSubmit changes
 watch(confirmSubmit, (newVal) => {
   if (newVal && submitModal) {
     submitModal.show()
@@ -67,7 +66,6 @@ watch(confirmSubmit, (newVal) => {
   }
 })
 
-// Watch for timeUp changes
 watch(timeUp, (newVal) => {
   if (newVal && timeUpModal) {
     timeUpModal.show()
@@ -77,7 +75,6 @@ watch(timeUp, (newVal) => {
 
 // Methods
 const selectOption = (optionNumber) => {
-  // Create a new array to ensure reactivity
   const newAnswers = [...userAnswers.value]
   newAnswers[currentQuestionIndex.value] = optionNumber
   userAnswers.value = newAnswers
@@ -113,7 +110,7 @@ const submitQuiz = async () => {
     const answers = userAnswers.value.map((answer, index) => {
       return {
         question_id: questions.value[index].id,
-        selected_option: answer || 0 // Use 0 for unanswered questions
+        selected_option: answer || 0 
       }
     })
     
@@ -204,7 +201,6 @@ const formatTime = (seconds) => {
 // Lifecycle hooks
 onMounted(async () => {
   try {
-    // Initialize modals with proper event handlers
     if (submitModalRef.value) {
       submitModal = new bootstrap.Modal(submitModalRef.value, {
         backdrop: 'static',
@@ -557,7 +553,6 @@ onUnmounted(() => {
   </div>
 </template>
 
-<!-- The styles remain the same -->
 <style scoped>
 .quiz-attempt {
   min-height: 100vh;
@@ -672,7 +667,6 @@ onUnmounted(() => {
   background-color: #5f6368;
 }
 
-/* Responsive adjustments */
 @media (max-width: 767.98px) {
   .timer {
     font-size: 1rem;

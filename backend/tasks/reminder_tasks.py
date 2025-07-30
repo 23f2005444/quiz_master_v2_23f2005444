@@ -302,13 +302,11 @@ def send_email_safe(recipient, subject, html_content):
         # Send email with better error handling
         try:
             with smtplib.SMTP(smtp_server, smtp_port) as server:
-                # Set timeout to avoid hanging
                 server.timeout = 30
                 
-                # NO LOGIN NEEDED FOR MAILHOG!
                 server.sendmail(sender_email, recipient, message.as_string())
                 
-            logger.info(f"✅ Email sent successfully to {recipient}")
+            logger.info(f"Email sent successfully to {recipient}")
             return True
             
         except smtplib.SMTPException as smtp_error:
@@ -322,7 +320,7 @@ def send_email_safe(recipient, subject, html_content):
             return False
         
     except Exception as e:
-        logger.error(f"❌ Email setup error for {recipient}: {str(e)}")
+        logger.error(f"Email setup error for {recipient}: {str(e)}")
         return False
 
 

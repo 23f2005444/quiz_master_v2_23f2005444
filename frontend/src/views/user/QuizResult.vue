@@ -32,7 +32,6 @@ const checkScreenSize = () => {
   }
 }
 
-// Fixed computed properties using backend data
 const correctAnswers = computed(() => {
   return result.value.correct_answers || 0
 })
@@ -152,7 +151,6 @@ const formatDuration = (minutes) => {
 
 <template>
   <div class="page-layout">
-    <!-- Overlay for mobile when sidebar is visible -->
     <div 
       v-if="isMobile && sidebarVisible" 
       class="sidebar-backdrop"
@@ -398,7 +396,6 @@ const formatDuration = (minutes) => {
   </div>
 </template>
 
-<!-- Keep the existing styles -->
 <style scoped>
 .page-layout {
   min-height: 100vh;
@@ -510,7 +507,6 @@ const formatDuration = (minutes) => {
   color: white;
 }
 
-/* Sidebar backdrop overlay for mobile */
 .sidebar-backdrop {
   position: fixed;
   top: 0;
@@ -521,7 +517,6 @@ const formatDuration = (minutes) => {
   z-index: 1030;
 }
 
-/* Responsive styles */
 @media (max-width: 991.98px) {
   .main-content {
     margin-left: 0 !important;

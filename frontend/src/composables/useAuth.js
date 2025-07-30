@@ -5,7 +5,6 @@ import axios from 'axios'
 const API_URL = 'http://localhost:5000/api'
 
 export function useAuth() {
-  // Reactive state for user info and loading status
   const userData = ref(null)
   const loading = ref(false)
   const error = ref(null)
@@ -19,10 +18,8 @@ export function useAuth() {
     return userData.value
   }
   
-  // Initialize or reload user data
   loadUserData()
 
-  // Computed properties based on auth state
   const user = computed(() => userData.value || {})
   
   const isAuthenticated = computed(() => {
@@ -33,11 +30,9 @@ export function useAuth() {
     return authService.getRole()
   })
 
-  // Initialize auth - called from App.vue
   const initAuth = async () => {
     loading.value = true
     try {
-      // First check if we have a token
       const token = authService.getToken()
       if (!token) {
         loading.value = false
@@ -45,7 +40,6 @@ export function useAuth() {
       }
 
 
-      // Then verify it's valid
       const isValid = await validateToken()
       
       if (!isValid) {
@@ -54,8 +48,7 @@ export function useAuth() {
         return false
       }
 
-      // Make sure we have user data
-      loadUserData()
+  loadUserData()
       return true
     } catch (e) {
       return false
@@ -64,10 +57,8 @@ export function useAuth() {
     }
   }
 
-  // Validate the current token
   const validateToken = async () => {
     try {
-      // Try to validate token with server first
       const token = authService.getToken()
       if (!token) return false
 
@@ -79,7 +70,6 @@ export function useAuth() {
         return true
       } catch (err) {
         
-        // Fallback to client-side validation
         return authService.isTokenValid()
       }
     } catch (e) {

@@ -70,7 +70,6 @@ onMounted(async () => {
     // Initial screen size check
     checkScreenSize()
     
-    // Handle window resize for responsive design
     window.addEventListener('resize', checkScreenSize)
     
     // Load dashboard data
@@ -95,7 +94,6 @@ const loadDashboardData = async () => {
   }
 }
 
-// Split data loading into separate functions for better error handling
 const loadStats = async () => {
   try {
     const response = await api.get('/user/dashboard')
@@ -158,7 +156,6 @@ const formatRelativeTime = (dateString) => {
 
 <template>
   <div class="dashboard-layout">
-    <!-- Overlay for mobile when sidebar is visible -->
     <div 
       v-if="isMobile && sidebarVisible" 
       class="sidebar-backdrop"
@@ -430,7 +427,6 @@ a {
   text-decoration: none;
 }
 
-/* Sidebar backdrop overlay for mobile */
 .sidebar-backdrop {
   position: fixed;
   top: 0;
@@ -441,7 +437,6 @@ a {
   z-index: 1030;
 }
 
-/* Responsive styles */
 @media (max-width: 991.98px) {
   .main-content {
     margin-left: 0 !important;

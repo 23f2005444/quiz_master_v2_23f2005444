@@ -513,7 +513,6 @@ onMounted(async () => {
   try {
     await Promise.all([loadChapter(), loadQuizzes()])
     
-    // Initialize Bootstrap modals
     setTimeout(() => {
       if (quizModalRef.value) {
         quizModalInstance = new bootstrap.Modal(quizModalRef.value)

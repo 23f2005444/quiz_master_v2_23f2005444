@@ -9,9 +9,7 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/register', methods=['POST'])
 def register():
     try:
-        data = request.json
-        
-        # Validate required fields
+        data = request.json        
         required_fields = ['email', 'password', 'full_name', 'qualification', 'date_of_birth']
         if not all(field in data for field in required_fields):
             return jsonify({'msg': 'Missing required fields'}), 400
@@ -56,7 +54,6 @@ def login():
     if role == 'admin':
         admin = Admin.query.filter_by(username=data.get('username')).first()
         if admin and admin.verify_password(data.get('password')):
-            # Create token with 24 hour expiry
             token = create_access_token(
                 identity=str(admin.id), 
                 additional_claims={'role': 'admin'},
@@ -75,7 +72,6 @@ def login():
     else:
         user = User.query.filter_by(email=data.get('email')).first()
         if user and user.verify_password(data.get('password')):
-            # Create token with 24 hour expiry
             token = create_access_token(
                 identity=str(user.id), 
                 additional_claims={'role': 'user'},
@@ -97,8 +93,7 @@ def login():
 @auth_bp.route('/validate', methods=['GET'])
 @jwt_required()
 def validate_token():
-    # If JWT is valid, this endpoint will be accessible
-    # Get the user ID from the token
+
     user_id = get_jwt_identity()
     
     return jsonify({

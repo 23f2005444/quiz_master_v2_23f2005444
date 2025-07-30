@@ -7,10 +7,9 @@ export const authService = {
     try {
       
       const response = await axios.post(`${API_URL}/auth/login`, credentials, {
-        timeout: 5000 // 5-second timeout
+        timeout: 5000 
       })
       
-      // Store token and user data
       const token = response.data.access_token
       if (token) {
         localStorage.setItem('token', token)
@@ -68,13 +67,10 @@ export const authService = {
     const token = this.getToken()
     if (!token) return false
     
-    // Simple expiration check for JWT tokens
     try {
-      // Split the token to get the payload part
       const base64Url = token.split('.')[1]
       if (!base64Url) return false
       
-      // Decode the base64 string
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
       const payload = JSON.parse(atob(base64))
       

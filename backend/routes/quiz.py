@@ -158,7 +158,6 @@ def get_quizzes_by_chapter(chapter_id):
          
         result = []
         for q in quizzes:
-            # Create quiz object to check availability
             quiz_obj = Quiz.query.get(q.id)
             
             quiz_data = {
@@ -221,10 +220,6 @@ def get_quiz(quiz_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-# def export_user_quiz_attempts(user_id):
-#     """Export user quiz attempts - placeholder function"""
-#     # This function will be implemented in the export tasks
-#     pass
 
 @quiz_bp.route('/quizzes/<int:quiz_id>/questions/count', methods=['GET'])
 @jwt_required()
@@ -298,7 +293,6 @@ def get_attempt(attempt_id):
     try:
         user_id = get_jwt_identity()
         
-        # Find the attempt and verify ownership
         attempt = QuizAttempt.query.get_or_404(attempt_id)
         if attempt.user_id != int(user_id):
             return jsonify({"error": "Unauthorized"}), 403
@@ -323,7 +317,6 @@ def get_attempt(attempt_id):
 def get_attempt_questions(attempt_id):
     """Get questions for an attempt"""
     try:
-        print(f"Getting questions for attempt ID: {attempt_id}")
         user_id = get_jwt_identity()
         
         # Find the attempt and ensure it belongs to this user
@@ -339,7 +332,6 @@ def get_attempt_questions(attempt_id):
         questions = Question.query.filter_by(quiz_id=attempt.quiz_id).all()
         
         if not questions:
-            print(f"No questions found for quiz ID: {attempt.quiz_id}")
             return jsonify([]), 200
             
         # Shuffle questions for randomization
@@ -355,11 +347,9 @@ def get_attempt_questions(attempt_id):
             'marks': q.marks
         } for q in questions]
         
-        print(f"Returning {len(result)} questions for attempt ID: {attempt_id}")
         return jsonify(result)
         
     except Exception as e:
-        print(f"Error in get_attempt_questions: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @quiz_bp.route('/attempts/<int:attempt_id>/submit', methods=['PUT'])
@@ -514,7 +504,7 @@ def get_attempt_results(attempt_id):
                 'option_2': r.option_2,
                 'option_3': r.option_3,
                 'option_4': r.option_4,
-                'selected_option': r.selected_option or 0,  # Ensure it's never null
+                'selected_option': r.selected_option or 0,
                 'correct_option': r.correct_option,
                 'is_correct': r.is_correct,
                 'score': r.score,

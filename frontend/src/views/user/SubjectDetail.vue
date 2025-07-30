@@ -1,7 +1,6 @@
 <template>
   <div class="page-layout">
-    <!-- Overlay for mobile when sidebar is visible -->
-    <div 
+\    <div 
       v-if="isMobile && sidebarVisible" 
       class="sidebar-backdrop"
       @click="toggleSidebar"
@@ -192,7 +191,6 @@ const formatDate = (dateString) => {
   padding: 0.5em 0.75em;
 }
 
-/* Sidebar backdrop overlay for mobile */
 .sidebar-backdrop {
   position: fixed;
   top: 0;
@@ -203,7 +201,6 @@ const formatDate = (dateString) => {
   z-index: 1030;
 }
 
-/* Responsive styles */
 @media (max-width: 991.98px) {
   .main-content {
     margin-left: 0 !important;

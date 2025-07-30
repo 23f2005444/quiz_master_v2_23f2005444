@@ -39,7 +39,7 @@ const props = defineProps({
 })
 
 const iconBgColor = computed(() => {
-  return `${props.color}20` // Add 20% opacity
+  return `${props.color}20` 
 })
 </script>
 

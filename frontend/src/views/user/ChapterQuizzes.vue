@@ -1,6 +1,5 @@
 <template>
   <div class="page-layout">
-    <!-- Overlay for mobile when sidebar is visible -->
     <div 
       v-if="isMobile && sidebarVisible" 
       class="sidebar-backdrop"
@@ -210,8 +209,6 @@ const checkScreenSize = () => {
 const filteredQuizzes = computed(() => {
   let result = [...quizzes.value];
   
-  // Don't filter by availability here - show all active quizzes
-  // Only filter by search query
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
     result = result.filter(quiz => 
@@ -284,7 +281,6 @@ const formatRelativeTime = (dateString) => {
 
 const sortQuizzes = (field) => {
   if (sortBy.value === field) {
-    // Toggle direction if same field
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
   } else {
     // Set new field and reset direction
@@ -453,7 +449,6 @@ const formatDate = (dateString) => {
   text-overflow: ellipsis;
 }
 
-/* Sidebar backdrop overlay for mobile */
 .sidebar-backdrop {
   position: fixed;
   top: 0;
@@ -464,7 +459,6 @@ const formatDate = (dateString) => {
   z-index: 1030;
 }
 
-/* Responsive styles */
 @media (max-width: 991.98px) {
   .main-content {
     margin-left: 0 !important;

@@ -72,7 +72,6 @@ const logout = () => {
   background-color: #6366f1;
 }
 
-/* Touch-friendly dropdowns on mobile */
 @media (max-width: 767.98px) {
   .dropdown-item {
     padding: 0.5rem 1rem;

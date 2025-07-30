@@ -11,7 +11,6 @@ def admin_required(fn):
     @jwt_required()
     def wrapper(*args, **kwargs):
         current_user_id = get_jwt_identity()
-        print("JWT Identity:", current_user_id)
         
         try:
             admin_id = int(current_user_id)
@@ -40,10 +39,10 @@ def get_users():
             'created_at': user.created_at.isoformat()
         } for user in users]
         
-        return jsonify(user_list)  # FIXED: Added return
+        return jsonify(user_list)  
     except Exception as e:
-        return jsonify({"error": str(e)}), 500  # FIXED: Added return
-    
+        return jsonify({"error": str(e)}), 500
+
 @admin_bp.route('/subjects', methods=['GET'])
 @admin_required
 def get_subjects():
@@ -56,8 +55,8 @@ def get_subjects():
             'is_active': subject.is_active,
             'created_at': subject.created_at.isoformat()
         } for subject in subjects]
-        
-        return jsonify(subject_list)  # FIXED: Added return
+
+        return jsonify(subject_list)
     except Exception as e:
         return jsonify({"error": str(e)}), 500 
 
@@ -85,19 +84,16 @@ def create_subject():
         data = request.json
         current_user_id = get_jwt_identity()
         
-        # Validate required fields
         if 'name' not in data or not data['name']:
             return jsonify({"msg": "Subject name is required"}), 422
         if 'description' not in data or not data['description']:
             return jsonify({"msg": "Subject description is required"}), 422
             
-        # Convert string ID to integer
         try:
             admin_id = int(current_user_id)
         except (ValueError, TypeError):
             return jsonify({"msg": "Invalid admin ID format"}), 422
         
-        # Check if subject with same name already exists
         existing_subject = Subject.query.filter_by(name=data['name']).first()
         if existing_subject:
             return jsonify({"msg": "A subject with this name already exists"}), 422
@@ -105,7 +101,7 @@ def create_subject():
         new_subject = Subject(
             name=data['name'],
             description=data['description'],
-            created_by=admin_id,  # Use the integer ID directly
+            created_by=admin_id, 
             is_active=data.get('is_active', True)
         )
         
@@ -193,16 +189,13 @@ def create_chapter(subject_id):
         data = request.json
         current_user_id = get_jwt_identity()
         
-        # Convert string ID to integer
         try:
             admin_id = int(current_user_id)
         except (ValueError, TypeError):
             return jsonify({"msg": "Invalid admin ID format"}), 422
             
-        # Check if subject exists
         subject = Subject.query.get_or_404(subject_id)
         
-        # Get the highest sequence number for this subject
         max_seq = db.session.query(db.func.max(Chapter.sequence_number))\
             .filter_by(subject_id=subject_id).scalar() or 0
         
@@ -211,7 +204,7 @@ def create_chapter(subject_id):
             name=data['name'],
             description=data['description'],
             sequence_number=max_seq + 1,
-            created_by=admin_id,  # Use the integer ID directly
+            created_by=admin_id, 
             is_active=data.get('is_active', True)
         )
         
@@ -316,12 +309,11 @@ def get_quizzes(chapter_id):
             'time_until_end': str(quiz.time_until_end()) if quiz.time_until_end() else None,
             'created_at': quiz.created_at.isoformat() if quiz.created_at else None
         } for quiz in quizzes]
-        
-        return jsonify(quiz_list)  # This was missing!
+
+        return jsonify(quiz_list)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Add this function to the existing admin.py file
 @admin_bp.route('/chapters/<int:chapter_id>/quizzes', methods=['POST'])
 @admin_required
 def create_quiz(chapter_id):
@@ -331,13 +323,11 @@ def create_quiz(chapter_id):
         
         admin_id = int(current_user_id)
         
-        # Validate required fields
         required_fields = ['title', 'description', 'start_date', 'start_time', 'time_duration', 'passing_score', 'total_marks']
         for field in required_fields:
             if field not in data or not data[field]:
                 return jsonify({"error": f"Missing required field: {field}"}), 400
         
-        # Parse dates and times
         from datetime import datetime, date, time
         
         try:
@@ -442,16 +432,12 @@ def update_quiz(quiz_id):
     try:
         data = request.json
         quiz = Quiz.query.get_or_404(quiz_id)
-        
-        print("Received quiz update data:", data)
-        
-        # Update basic text fields
+                
         if 'title' in data:
             quiz.title = data['title']
         if 'description' in data:
             quiz.description = data['description']
             
-        # Handle numeric fields with validation
         if 'time_duration' in data:
             try:
                 quiz.time_duration = int(data['time_duration'])
@@ -470,7 +456,6 @@ def update_quiz(quiz_id):
             except (ValueError, TypeError):
                 return jsonify({"msg": "Invalid total marks"}), 400
         
-        # Handle scheduling fields
         if 'start_date' in data and data['start_date']:
             try:
                 from datetime import datetime
@@ -485,7 +470,6 @@ def update_quiz(quiz_id):
             except ValueError:
                 return jsonify({"msg": "Invalid start time format"}), 400
                 
-        # Handle optional end date and time
         if 'end_date' in data:
             if data['end_date'] and data['end_date'].strip():
                 try:
@@ -504,14 +488,12 @@ def update_quiz(quiz_id):
             else:
                 quiz.end_time = None
         
-        # Handle boolean fields
         if 'auto_lock_after_expiry' in data:
             quiz.auto_lock_after_expiry = bool(data['auto_lock_after_expiry'])
             
         if 'is_active' in data:
             quiz.is_active = bool(data['is_active'])
         
-        # Validate logical constraints
         if quiz.passing_score > 100:
             return jsonify({"msg": "Passing score cannot exceed 100%"}), 400
             
@@ -590,25 +572,18 @@ def create_question(quiz_id):
         data = request.json
         current_user_id = get_jwt_identity()
         
-        # Print received data for debugging
-        print("Received question data:", data)
-        
-        # Convert string ID to integer
         try:
             admin_id = int(current_user_id)
         except (ValueError, TypeError):
             return jsonify({"msg": "Invalid admin ID format"}), 422
             
-        # Check if quiz exists
         quiz = Quiz.query.get_or_404(quiz_id)
         
-        # Validate required fields
         required_fields = ['question_text', 'option_1', 'option_2', 'option_3', 'option_4', 'correct_option', 'marks']
         for field in required_fields:
             if field not in data or not data[field]:
                 return jsonify({"msg": f"Field '{field}' is required"}), 422
         
-        # Validate correct_option is between 1 and 4
         try:
             correct_option = int(data['correct_option'])
             if correct_option < 1 or correct_option > 4:
@@ -616,7 +591,6 @@ def create_question(quiz_id):
         except (ValueError, TypeError):
             return jsonify({"msg": "Correct option must be a number between 1 and 4"}), 422
             
-        # Validate marks is a positive number
         try:
             marks = int(data['marks'])
             if marks <= 0:
@@ -624,7 +598,6 @@ def create_question(quiz_id):
         except (ValueError, TypeError):
             return jsonify({"msg": "Marks must be a positive number"}), 422
         
-        # Create the new question
         new_question = Question(
             quiz_id=quiz_id,
             question_text=data['question_text'],
@@ -654,7 +627,6 @@ def create_question(quiz_id):
         db.session.rollback()
         return jsonify({"msg": f"Database error: {str(e)}"}), 500
     except Exception as e:
-        print(f"Error creating question: {str(e)}")
         return jsonify({"msg": f"Error creating question: {str(e)}"}), 500
 
 @admin_bp.route('/questions/<int:question_id>', methods=['PUT'])
@@ -722,7 +694,7 @@ def get_dashboard_stats():
             'subjects_count': subjects_count,
             'quizzes_count': quizzes_count,
             'questions_count': questions_count
-        })  # FIXED: Added return
+        })  
     except Exception as e:
         return jsonify({"error": str(e)}), 500 
 
@@ -732,7 +704,6 @@ def get_dashboard_stats():
 def debug_token():
     current_user_id = get_jwt_identity()
     
-    # Get admin info if exists
     admin = None
     try:
         admin_id = int(current_user_id)
@@ -753,13 +724,9 @@ def trigger_daily_reminders():
     Admin endpoint to manually trigger daily reminders
     Useful for testing the email functionality
     """
-    try:
-        print("Admin triggered daily reminders")
-        
-        # Import task directly
+    try:        
         from tasks.reminder_tasks import send_daily_reminders
         
-        # Trigger the task
         task = send_daily_reminders.delay()
         
         return jsonify({
@@ -769,7 +736,6 @@ def trigger_daily_reminders():
         })
         
     except Exception as e:
-        print(f"Error triggering daily reminders: {str(e)}")
         return jsonify({
             'status': 'error',
             'message': f'Failed to trigger daily reminders: {str(e)}'
@@ -783,12 +749,9 @@ def trigger_monthly_reports():
     Useful for testing the email functionality
     """
     try:
-        print("Admin triggered monthly reports")
         
-        # Import task directly
         from tasks.reminder_tasks import send_monthly_activity_report
         
-        # Trigger the task
         task = send_monthly_activity_report.delay()
         
         return jsonify({
@@ -798,7 +761,6 @@ def trigger_monthly_reports():
         })
         
     except Exception as e:
-        print(f"Error triggering monthly reports: {str(e)}")
         return jsonify({
             'status': 'error',
             'message': f'Failed to trigger monthly reports: {str(e)}'
@@ -811,10 +773,8 @@ def get_email_task_status(task_id):
     Check status of an email task
     """
     try:
-        # Import AsyncResult directly
         from celery.result import AsyncResult
         
-        # Get task result
         task = AsyncResult(task_id)
         
         if task.state == 'PENDING':

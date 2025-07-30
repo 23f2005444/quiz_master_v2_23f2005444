@@ -306,7 +306,6 @@ onMounted(async () => {
   try {
     await loadSubjects();
     
-    // Use a simpler approach to initialize modals
     setTimeout(() => {
       if (subjectModalRef.value) {
         subjectModalInstance = new bootstrap.Modal(subjectModalRef.value)

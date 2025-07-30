@@ -566,17 +566,15 @@ const resetForm = () => {
 }
 
 const getOptionLetter = (index) => {
-  return String.fromCharCode(65 + index - 1) // 1 -> A, 2 -> B, etc.
+  return String.fromCharCode(65 + index - 1)
 }
 
 const formatDateSimple = (dateString) => {
-  // Handle null, undefined, or empty strings
   if (!dateString || dateString === 'null' || dateString === 'undefined') {
-    return 'Not scheduled yet';  // More informative message than N/A
+    return 'Not scheduled yet';  
   }
   
   try {
-    // Try to parse the date string
     const date = new Date(dateString);
     
     // Check if the date is valid
@@ -593,7 +591,6 @@ const formatDateSimple = (dateString) => {
 }
 
 const formatDuration = (minutes) => {
-  // Handle null, undefined, or invalid numbers
   if (!minutes || isNaN(minutes) || minutes <= 0) {
     return '0 mins'
   }

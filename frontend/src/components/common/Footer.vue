@@ -101,7 +101,6 @@
             </p>
           </div>
           <div class="col-md-6 text-center text-md-end">
-            <!-- <img src="@/assets/payment-methods.png" alt="Payment Methods" height="24" class="payment-methods"> -->
           </div>
         </div>
       </div>

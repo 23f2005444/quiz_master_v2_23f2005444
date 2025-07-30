@@ -14,14 +14,11 @@ def start_attempt(quiz_id):
     try:
         user_id = get_jwt_identity()
         
-        # Check if quiz exists
         quiz = Quiz.query.get_or_404(quiz_id)
         
-        # Check if quiz is active
         if not quiz.is_active:
             return jsonify({"error": "This quiz is not currently active"}), 400
         
-        # Check if there's an in-progress attempt
         existing_attempt = QuizAttempt.query.filter_by(
             user_id=user_id, 
             quiz_id=quiz_id, 
@@ -34,7 +31,6 @@ def start_attempt(quiz_id):
                 "message": "You already have an attempt in progress"
             }), 200
         
-        # Create a new attempt
         new_attempt = QuizAttempt(
             user_id=user_id,
             quiz_id=quiz_id,
@@ -43,7 +39,7 @@ def start_attempt(quiz_id):
         )
         
         db.session.add(new_attempt)
-        db.session.flush()  # Get the ID without committing
+        db.session.flush()  
         
         # Get questions for this quiz
         questions = Question.query.filter_by(quiz_id=quiz_id).all()
@@ -264,7 +260,7 @@ def get_attempt_results(attempt_id):
             QuizResponse.question_id,
             QuizResponse.selected_option,
             QuizResponse.is_correct,
-            QuizResponse.score,  # Changed from marks_obtained to score
+            QuizResponse.score, 
             Question.question_text,
             Question.option_1,
             Question.option_2,
@@ -287,7 +283,7 @@ def get_attempt_results(attempt_id):
             "selected_option": r.selected_option,
             "is_correct": r.is_correct,
             "marks_possible": r.marks,
-            "score": r.score  # Changed from marks_obtained to score
+            "score": r.score
         } for r in responses]
         
         result = {

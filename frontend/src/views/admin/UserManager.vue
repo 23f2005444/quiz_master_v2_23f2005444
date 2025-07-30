@@ -188,7 +188,6 @@ const userInitials = computed(() => {
 onMounted(async () => {
   await loadUsers()
   
-  // Initialize Bootstrap modal
   userModal.value = new Modal(document.getElementById('userDetailsModal'))
 })
 

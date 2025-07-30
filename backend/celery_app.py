@@ -4,12 +4,10 @@ from dotenv import load_dotenv
 import sys
 from pathlib import Path
 
-# Ensure the parent directory is in the Python path
 backend_dir = Path(__file__).parent.absolute()
 if str(backend_dir) not in sys.path:
     sys.path.append(str(backend_dir))
 
-# Load environment variables
 load_dotenv()
 
 # Create Celery instance
@@ -35,7 +33,6 @@ celery.conf.update(
     imports=['tasks.reminder_tasks', 'tasks.export_tasks'],
 )
 
-# Beat schedule config (unchanged)
 celery.conf.beat_schedule = {
     'cleanup-old-exports': {
         'task': 'tasks.export_tasks.cleanup_export_files_task',
@@ -54,7 +51,6 @@ celery.conf.beat_schedule = {
     },
 }
 
-# Initialize Flask app context if needed
 def init_celery(app):
     class ContextTask(celery.Task):
         def __call__(self, *args, **kwargs):
@@ -62,7 +58,6 @@ def init_celery(app):
                 return self.run(*args, **kwargs)
     celery.Task = ContextTask
 
-# 👇 THIS BLOCK ADDS FLASK CONTEXT WHEN CELERY RUNS STANDALONE
 try:
     from app import app as flask_app
     init_celery(flask_app)

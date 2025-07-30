@@ -1,6 +1,5 @@
 <template>
   <div class="page-layout">
-    <!-- Overlay for mobile when sidebar is visible -->
     <div 
       v-if="isMobile && sidebarVisible" 
       class="sidebar-backdrop"
@@ -340,12 +339,10 @@ const startQuiz = async () => {
   
   startingQuiz.value = true
   try {
-    // Check if quizId is valid before making the request
     if (!quizId || isNaN(quizId)) {
       throw new Error('Invalid quiz ID')
     }
     
-    // Check if the quiz has questions before creating an attempt
     if (questionCount.value <= 0) {
       alert('This quiz has no questions. Please try a different quiz.')
       return
@@ -355,7 +352,6 @@ const startQuiz = async () => {
     
     const attemptId = response.data.id
     
-    // Verify that we got a valid attempt ID before redirecting
     if (!attemptId || isNaN(attemptId)) {
       throw new Error('Invalid attempt ID returned from server')
     }
@@ -404,11 +400,9 @@ const formatDateTime = (date, time) => {
   if (!date) return 'Not set'
   try {
     if (time) {
-      // Combine date and time
       const dateTimeStr = `${date}T${time}`
       return format(new Date(dateTimeStr), 'MMM dd, yyyy, h:mm a')
     } else {
-      // Just date
       return format(new Date(date), 'MMM dd, yyyy')
     }
   } catch (e) {
@@ -490,12 +484,10 @@ const formatDuration = (minutes) => {
   font-size: 2rem;
 }
 
-/* Responsive table */
 .table-responsive-card {
   width: 100%;
 }
 
-/* Sidebar backdrop overlay for mobile */
 .sidebar-backdrop {
   position: fixed;
   top: 0;
@@ -506,7 +498,6 @@ const formatDuration = (minutes) => {
   z-index: 1030;
 }
 
-/* Responsive styles */
 @media (max-width: 991.98px) {
   .main-content {
     margin-left: 0 !important;

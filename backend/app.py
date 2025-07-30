@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 import os
 import logging
 
-# Set up logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -29,7 +28,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = os.getenv('SQLALCHEMY_TRACK_MODIF
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 
-# Configure Flask-Caching with Redis or fallback
 app.config['CACHE_TYPE'] = os.getenv('CACHE_TYPE', 'redis')
 app.config['REDIS_HOST'] = os.getenv('REDIS_HOST', 'localhost')
 app.config['REDIS_PORT'] = int(os.getenv('REDIS_PORT', 6379))
@@ -39,7 +37,6 @@ app.config['CACHE_DEFAULT_TIMEOUT'] = int(os.getenv('CACHE_TIMEOUT', 300))
 
 # Initialize extensions
 db.init_app(app)
-# Initialize cache with enhanced setup
 cache = init_cache(app)
 jwt = JWTManager(app)
 
@@ -77,7 +74,6 @@ app.register_blueprint(attempts_bp, url_prefix='/api/attempts')
 app.register_blueprint(users_bp, url_prefix='/api/users')
 app.register_blueprint(exports_bp, url_prefix='/api/exports')  # New export routes
 
-# Create a route to test cache
 @app.route('/api/test-cache')
 def test_cache():
     from controllers.extensions import cache

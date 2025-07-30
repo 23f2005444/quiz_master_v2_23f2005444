@@ -4,12 +4,10 @@
   flex-direction: column;
 }
 
-/* Remove default Vue link styles */
 a {
   text-decoration: none;
 }
 
-/* Keep content from being hidden behind footer */
 main {
   flex: 1 0 auto;
 }

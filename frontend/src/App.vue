@@ -10,7 +10,6 @@ const loading = ref(true)
 onMounted(async () => {
   
   try {
-    // Initialize auth state
     await auth.initAuth()
     
     console.log('Auth state initialized:', {

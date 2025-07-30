@@ -175,23 +175,18 @@ const handleRegister = async () => {
     loading.value = true
     error.value = ''
     
-    // Ensure date is in the correct format
     if (!formData.date_of_birth) {
       error.value = 'Please enter your date of birth'
       return
     }
     
-    // Password validation
     if (formData.password.length < 8) {
       error.value = 'Password must be at least 8 characters long'
       return
     }
     
-    
-    // Send registration request
     await authService.register(formData)
     
-    // If registration was successful, show success message and redirect
     router.push({
       path: '/login',
       query: { registered: 'success' }

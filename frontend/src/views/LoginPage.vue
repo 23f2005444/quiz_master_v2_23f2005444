@@ -126,7 +126,7 @@ const route = useRoute()
 const error = ref('')
 const loading = ref(false)
 const showPassword = ref(false)
-const serverStatus = ref('unknown') // 'unknown', 'online', 'offline'
+const serverStatus = ref('unknown')
 
 const formData = reactive({
   role: 'user',
@@ -135,13 +135,10 @@ const formData = reactive({
 })
 
 onMounted(async () => {
-  // Check if user was redirected due to session expiry
   if (route.query.reason === 'session_expired') {
     error.value = 'Your session has expired. Please log in again.'
   }
-  
-  // Check if server is running
-  checkServerStatus()
+    checkServerStatus()
 })
 
 const checkServerStatus = async () => {
@@ -154,7 +151,6 @@ const checkServerStatus = async () => {
       serverStatus.value = 'offline'
       error.value = 'Cannot connect to server. Please ensure the backend is running.'
     } else {
-      // Server is up but returned an error
       serverStatus.value = 'online'
     }
   }
@@ -187,7 +183,6 @@ const handleLogin = async () => {
     }
 
     
-    // Use the auth service to login
     const response = await authService.login(credentials)
     
     // Redirect based on role

@@ -8,7 +8,6 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
-  // Add timeout to avoid long waits when server is down
   timeout: 10000
 })
 
@@ -37,14 +36,11 @@ apiClient.interceptors.response.use(
       return Promise.reject(new Error('Backend server is not responding. Please check if it\'s running.'))
     }
     
-    // Special handling for CORS errors
     if (error.message && error.message.includes('Network Error')) {
     }
     
-    // Handle 401 unauthorized (expired token)
     if (error.response?.status === 401) {
       authService.logout()
-      // Use window.location to force a full page reload
       window.location.href = '/login?reason=session_expired'
     }
     

@@ -15,7 +15,7 @@ def get_user(user_id):
         # Users can access their own data
         if int(current_user_id) != user_id:
             # Allow admins to access any user data
-            admin_role = False  # You'd need to check if current user is admin
+            admin_role = False 
             if not admin_role:
                 return jsonify({"error": "Unauthorized access"}), 403
                 

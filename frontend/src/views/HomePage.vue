@@ -93,7 +93,6 @@ import Footer from '@/components/common/Footer.vue'
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
-/* Badge Styles */
 .badge {
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
@@ -120,7 +119,6 @@ import Footer from '@/components/common/Footer.vue'
   color: #4a5568;
 }
 
-/* Section Spacing */
 .py-section {
   padding: 5rem 0;
 }
@@ -129,7 +127,6 @@ import Footer from '@/components/common/Footer.vue'
   padding: 3rem 0;
 }
 
-/* Icon Styles */
 .icon-feature {
   width: 48px;
   height: 48px;
@@ -161,7 +158,6 @@ import Footer from '@/components/common/Footer.vue'
   color: #2563eb;
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
   .display-4 {
     font-size: 2.5rem;
@@ -177,26 +173,22 @@ import Footer from '@/components/common/Footer.vue'
   }
 }
 
-/* Smooth Scroll */
-html {
+\html {
   scroll-behavior: smooth;
 }
 
-/* Focus States */
 .btn:focus,
 .card:focus {
   outline: 2px solid #4338ca;
   outline-offset: 2px;
 }
 
-/* Loading States */
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
 }
 
-/* Dark Mode Support */
 @media (prefers-color-scheme: dark) {
   .home {
     background-color: #1a202c;

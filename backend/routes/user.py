@@ -44,7 +44,6 @@ def user_dashboard():
         })
         
     except Exception as e:
-        print(f"Dashboard error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @user_bp.route('/quizzes/available', methods=['GET'])
@@ -52,20 +51,16 @@ def user_dashboard():
 def get_available_quizzes():
     """Get list of available quizzes for the user with scheduling checks"""
     try:
-        # Use cache if available, but don't fail if caching doesn't work
         try:
-            # Try to use cached version
             cached_data = cache.get('available_quizzes')
             if cached_data:
                 return jsonify(cached_data)
         except Exception as cache_error:
             print(f"Cache error (continuing without cache): {str(cache_error)}")
 
-        # Get quizzes that are active and check scheduling
         from datetime import datetime
         now = datetime.now()
         
-        # First, get all the quizzes with their details
         quizzes = db.session.query(
             Quiz.id, 
             Quiz.title, 
@@ -87,10 +82,8 @@ def get_available_quizzes():
          
         result = []
         for q in quizzes:
-            # Create quiz object to use is_available method
             quiz_obj = Quiz.query.get(q.id)
             
-            # Only add quizzes that are actually available
             if quiz_obj and quiz_obj.is_available():
                 quiz_data = {
                     'id': q.id,
@@ -103,24 +96,22 @@ def get_available_quizzes():
                     'time_duration': q.time_duration,
                     'chapter_name': q.chapter_name,
                     'subject_name': q.subject_name,
-                    'is_available': True,  # Only available quizzes are included
+                    'is_available': True, 
                     'is_locked': q.is_locked,
-                    'time_until_start': None, # Already available
+                    'time_until_start': None,
                     'time_until_end': str(quiz_obj.time_until_end()) if quiz_obj and quiz_obj.time_until_end() else None,
                     'date_of_quiz': q.start_date.isoformat() if q.start_date else datetime.now().date().isoformat()
                 }
                 result.append(quiz_data)
         
-        # Try to store in cache, but don't fail if it doesn't work
         try:
-            cache.set('available_quizzes', result, timeout=60)  # Shorter cache for scheduling
+            cache.set('available_quizzes', result, timeout=60) 
         except Exception as cache_error:
             print(f"Failed to store in cache: {str(cache_error)}")
             
         return jsonify(result)
         
     except Exception as e:
-        print(f"Error in get_available_quizzes: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -251,7 +242,6 @@ def get_user(user_id):
     try:
         current_user_id = get_jwt_identity()
         
-        # Only allow users to access their own data
         if int(current_user_id) != user_id:
             return jsonify({"error": "Unauthorized"}), 403
             

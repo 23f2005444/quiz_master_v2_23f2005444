@@ -18,12 +18,10 @@ def export_user_quiz_attempts_sync():
     try:
         user_id = get_jwt_identity()
         
-        # Get user data
         user = User.query.get(user_id)
         if not user:
             return jsonify({'error': f'User with ID {user_id} not found'}), 404
         
-        # Get all quiz attempts for the user with related data
         attempts = db.session.query(
             QuizAttempt.id,
             QuizAttempt.score,
@@ -47,12 +45,10 @@ def export_user_quiz_attempts_sync():
          .order_by(QuizAttempt.created_at.desc())\
          .all()
         
-        # Create temporary file
         temp_dir = tempfile.gettempdir()
         filename = f"quiz_attempts_{user_id}_{uuid.uuid4().hex[:8]}.csv"
         filepath = os.path.join(temp_dir, filename)
         
-        # Write CSV file
         with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
             fieldnames = [
                 'Attempt ID', 'Subject', 'Chapter', 'Quiz Title', 'Date Attempted',
@@ -83,10 +79,8 @@ def export_user_quiz_attempts_sync():
                     'Status': attempt.status.upper()
                 })
         
-        # Get file size for response
         file_size = os.path.getsize(filepath)
         
-        # Return the CSV file directly
         return send_file(
             filepath,
             as_attachment=True,

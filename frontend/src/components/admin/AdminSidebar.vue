@@ -90,7 +90,6 @@ const logout = async () => {
   router.push('/login')
 }
 
-// Define props for mobile functionality
 const props = defineProps({
   isOpen: {
     type: Boolean,

@@ -151,7 +151,6 @@ const pollingIntervals = ref({ daily: null, monthly: null })
 const triggerDailyReminders = async () => {
   isTriggering.value.daily = true
   try {
-    console.log('Triggering daily reminders...')
     const response = await api.post('/admin/trigger-daily-reminders')
     dailyTaskId.value = response.data.task_id
     
@@ -169,7 +168,6 @@ const triggerDailyReminders = async () => {
 const triggerMonthlyReports = async () => {
   isTriggering.value.monthly = true
   try {
-    console.log('Triggering monthly reports...')
     const response = await api.post('/admin/trigger-monthly-reports')
     monthlyTaskId.value = response.data.task_id
     
@@ -200,9 +198,7 @@ const pollTaskStatus = (taskType, taskId) => {
       } else {
         monthlyTaskStatus.value = response.data
       }
-      
-      console.log(`${taskType} task status:`, response.data)
-      
+            
       // If task is completed or failed, stop polling
       if (['SUCCESS', 'FAILURE', 'REVOKED'].includes(response.data.state)) {
         clearInterval(pollingIntervals.value[taskType])

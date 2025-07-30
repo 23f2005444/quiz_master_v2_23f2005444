@@ -1,7 +1,5 @@
-<!-- filepath: d:\Projects\MAD 2 Project\quiz_master_v2_23f2005444\frontend\src\views\user\QuizAttemptList.vue -->
 <template>
   <div class="page-layout">
-    <!-- Overlay for mobile when sidebar is visible -->
     <div 
       v-if="isMobile && sidebarVisible" 
       class="sidebar-backdrop"
@@ -224,7 +222,6 @@ import UserNavbar from '@/components/user/UserNavbar.vue'
 import UserSidebar from '@/components/user/UserSidebar.vue'
 import { useApi } from '@/composables/useApi'
 import { format } from 'date-fns'
-// Add Bootstrap import at the top
 import * as bootstrap from 'bootstrap'
 
 const api = useApi()
@@ -235,7 +232,6 @@ const statusFilter = ref('all')
 const sidebarVisible = ref(false)
 const isMobile = ref(false)
 
-// Simplified export state - no complex async handling
 const exportState = ref({
   isExporting: false,
   error: null,
@@ -301,7 +297,6 @@ const loadAttempts = async () => {
   }
 }
 
-// Simplified synchronous export function
 const startExport = async () => {
   if (exportState.value.isExporting) return
   
@@ -310,7 +305,6 @@ const startExport = async () => {
     exportState.value.error = null
     exportState.value.success = false
     
-    console.log('Starting CSV export...')
     
     // Check if user has any attempts to export
     if (filteredAttempts.value.length === 0) {
@@ -318,7 +312,6 @@ const startExport = async () => {
       return
     }
     
-    // Make the export request with blob response type
     const response = await api.post('/exports/user/quiz-attempts', {}, {
       responseType: 'blob'
     })
@@ -342,23 +335,19 @@ const startExport = async () => {
     exportState.value.success = true
     showSuccessModal()
     
-    console.log('Export completed successfully')
     
   } catch (error) {
     console.error('Export error:', error)
     exportState.value.error = error.response?.data?.error || error.message || 'Failed to export data'
     
-    // Show user-friendly error message
     alert(`Export failed: ${exportState.value.error}`)
   } finally {
     exportState.value.isExporting = false
   }
 }
 
-// FIXED: Use proper Bootstrap import instead of require()
 const showSuccessModal = () => {
   try {
-    // Use imported Bootstrap instead of require()
     const modalElement = document.getElementById('exportSuccessModal')
     if (modalElement) {
       const modal = new bootstrap.Modal(modalElement)
@@ -456,7 +445,6 @@ const formatDuration = (minutes) => {
   color: #dee2e6;
 }
 
-/* Sidebar backdrop overlay for mobile */
 .sidebar-backdrop {
   position: fixed;
   top: 0;
@@ -467,7 +455,6 @@ const formatDuration = (minutes) => {
   z-index: 1030;
 }
 
-/* Responsive styles */
 @media (max-width: 991.98px) {
   .main-content {
     margin-left: 0 !important;
