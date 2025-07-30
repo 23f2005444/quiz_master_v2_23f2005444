@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Master - Monthly Activity Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #4f46e5;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: #f9fafb;
+            padding: 20px;
+            border-radius: 0 0 5px 5px;
+            border: 1px solid #e5e7eb;
+            border-top: none;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        h2 {
+            color: #4f46e5;
+            font-size: 20px;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #4f46e5;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        .stats-container {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0 -10px;
+        }
+        .stat-card {
+            flex: 1;
+            min-width: 120px;
+            margin: 10px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4f46e5;
+            margin: 10px 0;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #6b7280;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        th {
+            background-color: #f3f4f6;
+        }
+        .performance-excellent { color: #047857; }
+        .performance-good { color: #0369a1; }
+        .performance-satisfactory { color: #b45309; }
+        .performance-needs-improvement { color: #b91c1c; }
+        
+        .progress-bar-container {
+            height: 10px;
+            background-color: #e5e7eb;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #4f46e5;
+        }
+        .rank-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            background-color: #4f46e5;
+            color: white;
+            border-radius: 15px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Monthly Activity Report</h1>
+        <p>{{ month_name }}</p>
+    </div>
+    <div class="content">
+        <p>Hello {{ user_name }},</p>
+        
+        <p>Here's your monthly activity report for <strong>{{ month_name }}</strong>. This report summarizes your performance and activity on Quiz Master.</p>
+        
+        <h2>Monthly Performance</h2>
+        
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-label">Total Attempts</div>
+                <div class="stat-value">{{ total_attempts }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Completed</div>
+                <div class="stat-value">{{ completed_attempts }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Average Score</div>
+                <div class="stat-value">{{ average_score }}%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Passing Rate</div>
+                <div class="stat-value">{{ passing_rate }}%</div>
+            </div>
+        </div>
+        
+        <h2>Your Standing</h2>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+            <div>
+                <p>You are ranked <span class="rank-badge">#{{ rank }}</span> out of {{ total_users }} active users this month.</p>
+                
+                <p>Your performance level: 
+                    <strong class="
+                    {% if performance_level == 'Excellent' %}performance-excellent
+                    {% elif performance_level == 'Good' %}performance-good
+                    {% elif performance_level == 'Satisfactory' %}performance-satisfactory
+                    {% else %}performance-needs-improvement{% endif %}
+                    ">{{ performance_level }}</strong>
+                </p>
+            </div>
+        </div>
+        
+        <h2>Quiz Details</h2>
+        
+        {% if quizzes %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Quiz</th>
+                        <th>Subject</th>
+                        <th>Date</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for quiz in quizzes %}
+                        <tr>
+                            <td>{{ quiz.title }}</td>
+                            <td>{{ quiz.subject_name }}</td>
+                            <td>{{ quiz.created_at.strftime('%d %b, %Y') }}</td>
+                            <td>
+                                <div style="display: flex; align-items: center;">
+                                    <span style="width: 60px;">{{ quiz.score_percentage }}%</span>
+                                    <div style="flex: 1; margin-left: 10px;">
+                                        <div class="progress-bar-container">
+                                            <div class="progress-bar" style="width: {{ quiz.score_percentage }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>You haven't completed any quizzes this month.</p>
+        {% endif %}
+        
+        <p>Regular practice leads to better results. Keep up the good work!</p>
+        
+        <div style="text-align: center;">
+            <a href="{{ app_url }}" class="btn">View All Attempts</a>
+        </div>
+    </div>
+    <div class="footer">
+        <p>This is an automated monthly report from Quiz Master.</p>
+        <p>© {{ now().year }} Quiz Master. All rights reserved.</p>
+    </div>
+</body>
+</html>

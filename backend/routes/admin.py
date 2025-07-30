@@ -745,3 +745,103 @@ def debug_token():
         "identity": current_user_id,
         "admin_exists": admin is not None
     }), 200
+
+@admin_bp.route('/trigger-daily-reminders', methods=['POST'])
+@admin_required
+def trigger_daily_reminders():
+    """
+    Admin endpoint to manually trigger daily reminders
+    Useful for testing the email functionality
+    """
+    try:
+        print("Admin triggered daily reminders")
+        
+        # Import task directly
+        from tasks.reminder_tasks import send_daily_reminders
+        
+        # Trigger the task
+        task = send_daily_reminders.delay()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Daily reminders task triggered successfully',
+            'task_id': task.id
+        })
+        
+    except Exception as e:
+        print(f"Error triggering daily reminders: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to trigger daily reminders: {str(e)}'
+        }), 500
+
+@admin_bp.route('/trigger-monthly-reports', methods=['POST'])
+@admin_required
+def trigger_monthly_reports():
+    """
+    Admin endpoint to manually trigger monthly reports
+    Useful for testing the email functionality
+    """
+    try:
+        print("Admin triggered monthly reports")
+        
+        # Import task directly
+        from tasks.reminder_tasks import send_monthly_activity_report
+        
+        # Trigger the task
+        task = send_monthly_activity_report.delay()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Monthly reports task triggered successfully',
+            'task_id': task.id
+        })
+        
+    except Exception as e:
+        print(f"Error triggering monthly reports: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to trigger monthly reports: {str(e)}'
+        }), 500
+
+@admin_bp.route('/email-tasks/status/<task_id>', methods=['GET'])
+@admin_required
+def get_email_task_status(task_id):
+    """
+    Check status of an email task
+    """
+    try:
+        # Import AsyncResult directly
+        from celery.result import AsyncResult
+        
+        # Get task result
+        task = AsyncResult(task_id)
+        
+        if task.state == 'PENDING':
+            response = {
+                'state': task.state,
+                'status': 'Task is waiting to be processed...'
+            }
+        elif task.state == 'SUCCESS':
+            response = {
+                'state': task.state,
+                'result': task.result
+            }
+        elif task.state == 'FAILURE':
+            response = {
+                'state': task.state,
+                'error': str(task.result),
+            }
+        else:
+            response = {
+                'state': task.state,
+                'status': str(task.info) if task.info else 'Task is in progress...'
+            }
+            
+        return jsonify(response)
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Error checking task status: {str(e)}'
+        }), 500

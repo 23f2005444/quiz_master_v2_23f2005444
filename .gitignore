@@ -81,4 +81,7 @@ coverage.xml
 *.xlsx
 *.out
 
+celerybeat-schedule
+celerybeat-schedule.*
+
 instructions.txt

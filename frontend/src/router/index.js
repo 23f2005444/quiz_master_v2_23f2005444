@@ -12,6 +12,7 @@ import ChapterManager from '../views/admin/ChapterManager.vue'
 import QuizManager from '../views/admin/QuizManager.vue'
 import QuestionManager from '../views/admin/QuestionManager.vue'
 import UserManager from '../views/admin/UserManager.vue'
+import EmailTasks from '../views/admin/EmailTasks.vue'
 
 // User Views 
 import UserDashboard from '../views/user/UserDashboard.vue'
@@ -96,6 +97,15 @@ const router = createRouter({
       meta: { 
         requiresAuth: true,
         role: 'admin'
+      }
+    },
+    {
+      path: '/admin/email-tasks',
+      name: 'AdminEmailTasks',
+      component: EmailTasks,
+      meta: {
+        requiresAuth: true,
+        adminOnly: true
       }
     },
     // User Routes
