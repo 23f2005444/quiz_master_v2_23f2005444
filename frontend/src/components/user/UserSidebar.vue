@@ -37,12 +37,6 @@
           <span v-if="!isCollapsed">My Attempts</span>
         </router-link>
       </li>
-      <li class="nav-item">
-        <router-link to="/profile" class="nav-link text-white d-flex align-items-center" @click="handleNavClick">
-          <i class="bi bi-person me-3"></i>
-          <span v-if="!isCollapsed">My Profile</span>
-        </router-link>
-      </li>
     </ul>
     
     <div class="mt-auto p-3" v-if="!isCollapsed">

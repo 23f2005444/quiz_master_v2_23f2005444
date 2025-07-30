@@ -36,9 +36,6 @@
               </p>
               <div v-if="quiz" class="d-flex flex-wrap gap-3 mt-3">
                 <div class="badge bg-light text-dark p-2">
-                  <i class="bi bi-calendar me-2"></i> Date: {{ formatDateSimple(quiz.date_of_quiz) }}
-                </div>
-                <div class="badge bg-light text-dark p-2">
                   <i class="bi bi-clock me-2"></i> Duration: {{ formatDuration(quiz.time_duration) }}
                 </div>
                 <div class="badge bg-light text-dark p-2">
@@ -575,23 +572,23 @@ const getOptionLetter = (index) => {
 const formatDateSimple = (dateString) => {
   // Handle null, undefined, or empty strings
   if (!dateString || dateString === 'null' || dateString === 'undefined') {
-    return 'N/A'
+    return 'Not scheduled yet';  // More informative message than N/A
   }
   
   try {
     // Try to parse the date string
-    const date = new Date(dateString)
+    const date = new Date(dateString);
     
     // Check if the date is valid
     if (isNaN(date.getTime())) {
-      console.warn('Invalid date string:', dateString)
-      return 'Invalid Date'
+      console.warn('Invalid date string:', dateString);
+      return 'Invalid Date';
     }
     
-    return format(date, 'MMM dd, yyyy')
+    return format(date, 'MMM dd, yyyy');
   } catch (e) {
-    console.error('Error formatting date:', e, 'Date string:', dateString)
-    return 'Invalid Date'
+    console.error('Error formatting date:', e, 'Date string:', dateString);
+    return 'Invalid Date';
   }
 }
 

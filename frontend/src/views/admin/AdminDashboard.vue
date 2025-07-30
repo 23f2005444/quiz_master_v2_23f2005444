@@ -66,7 +66,6 @@
                         <th>Name</th>
                         <th>Description</th>
                         <th>Status</th>
-                        <th>Created At</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -83,7 +82,6 @@
                             {{ subject.is_active ? 'Active' : 'Inactive' }}
                           </span>
                         </td>
-                        <td>{{ formatDate(subject.created_at) }}</td>
                       </tr>
                       <tr v-if="recentSubjects.length === 0">
                         <td colspan="4" class="text-center py-3 text-muted">
@@ -114,7 +112,6 @@
                         <th>Name</th>
                         <th>Email</th>
                         <th>Qualification</th>
-                        <th>Joined Date</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -122,7 +119,6 @@
                         <td class="fw-medium">{{ user.full_name }}</td>
                         <td>{{ user.email }}</td>
                         <td>{{ user.qualification }}</td>
-                        <td>{{ formatDate(user.created_at) }}</td>
                       </tr>
                       <tr v-if="recentUsers.length === 0">
                         <td colspan="4" class="text-center py-3 text-muted">

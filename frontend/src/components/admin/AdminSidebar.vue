@@ -1,11 +1,18 @@
 <template>
   <div class="sidebar bg-light border-end">
     <div class="d-flex flex-column h-100">
-      <div class="p-3 border-bottom">
-        <h5 class="fw-bold text-primary">
+      <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold text-primary mb-0">
           <i class="bi bi-speedometer2 me-2"></i>
           Admin Panel
         </h5>
+        <!-- Close button for mobile view -->
+        <button 
+          class="btn-close d-lg-none" 
+          type="button" 
+          @click="closeSidebar"
+          aria-label="Close"
+        ></button>
       </div>
       
       <ul class="nav flex-column p-3">
@@ -15,6 +22,7 @@
             class="nav-link d-flex align-items-center"
             active-class="active"
             exact
+            @click="handleLinkClick"
           >
             <i class="bi bi-house-door me-2"></i>
             Dashboard
@@ -26,6 +34,7 @@
             to="/admin/subjects" 
             class="nav-link d-flex align-items-center"
             active-class="active"
+            @click="handleLinkClick"
           >
             <i class="bi bi-book me-2"></i>
             Subjects
@@ -37,18 +46,19 @@
             to="/admin/users" 
             class="nav-link d-flex align-items-center"
             active-class="active"
+            @click="handleLinkClick"
           >
             <i class="bi bi-people me-2"></i>
             Users
           </router-link>
         </li>
         
-        <!-- Add this new nav item -->
         <li class="nav-item mb-2">
           <router-link 
             to="/admin/email-tasks" 
             class="nav-link d-flex align-items-center"
             active-class="active"
+            @click="handleLinkClick"
           >
             <i class="bi bi-envelope-paper me-2"></i>
             Email Tasks
@@ -79,6 +89,27 @@ const logout = async () => {
   await authLogout()
   router.push('/login')
 }
+
+// Define props for mobile functionality
+const props = defineProps({
+  isOpen: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const emit = defineEmits(['close-sidebar'])
+
+const closeSidebar = () => {
+  emit('close-sidebar')
+}
+
+// Close sidebar on mobile after clicking a link
+const handleLinkClick = () => {
+  if (window.innerWidth < 992) {
+    closeSidebar()
+  }
+}
 </script>
 
 <style scoped>
@@ -87,6 +118,8 @@ const logout = async () => {
   height: calc(100vh - 56px);
   position: sticky;
   top: 56px;
+  transition: all 0.3s ease;
+  z-index: 1030;
 }
 
 .nav-link {
@@ -108,12 +141,20 @@ const logout = async () => {
   font-weight: 600;
 }
 
-@media (max-width: 992px) {
+/* Mobile styles */
+@media (max-width: 991.98px) {
   .sidebar {
-    width: 100%;
-    height: auto;
-    position: relative;
+    position: fixed;
+    left: 0;
     top: 0;
+    height: 100vh;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar.show {
+    transform: translateX(0);
   }
 }
 </style>

@@ -70,7 +70,6 @@
                       <th scope="col">Name</th>
                       <th scope="col">Description</th>
                       <th scope="col">Status</th>
-                      <th scope="col">Created At</th>
                       <th scope="col" class="text-end">Actions</th>
                     </tr>
                   </thead>
@@ -88,7 +87,6 @@
                           {{ subject.is_active ? 'Active' : 'Inactive' }}
                         </span>
                       </td>
-                      <td>{{ formatDate(subject.created_at) }}</td>
                       <td>
                         <div class="d-flex justify-content-end gap-2">
                           <router-link 

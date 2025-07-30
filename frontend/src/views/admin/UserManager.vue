@@ -56,7 +56,6 @@
                       <th scope="col">Email</th>
                       <th scope="col">Qualification</th>
                       <th scope="col">Date of Birth</th>
-                      <th scope="col">Joined</th>
                       <th scope="col" class="text-end">Actions</th>
                     </tr>
                   </thead>
@@ -137,12 +136,6 @@
                   <div class="d-flex w-100 justify-content-between">
                     <h6 class="mb-1">Date of Birth</h6>
                     <span>{{ formatDateSimple(selectedUser.date_of_birth) }}</span>
-                  </div>
-                </div>
-                <div class="list-group-item">
-                  <div class="d-flex w-100 justify-content-between">
-                    <h6 class="mb-1">Joined</h6>
-                    <span>{{ formatDateSimple(selectedUser.created_at) }}</span>
                   </div>
                 </div>
               </div>

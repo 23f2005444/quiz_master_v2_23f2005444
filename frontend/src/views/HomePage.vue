@@ -4,7 +4,6 @@
     <HeroSection />
     <StatsSection />
     <FeaturesSection />
-    <TestimonialsSection />
     <CTASection />
     <Footer />
   </div>
@@ -15,7 +14,6 @@ import NavBar from '@/components/common/NavBar.vue'
 import HeroSection from '@/components/home/HeroSection.vue'
 import StatsSection from '@/components/home/StatsSection.vue'
 import FeaturesSection from '@/components/home/FeaturesSection.vue'
-import TestimonialsSection from '@/components/home/TestimonialsSection.vue'
 import CTASection from '@/components/home/CTASection.vue'
 import Footer from '@/components/common/Footer.vue'
 </script>

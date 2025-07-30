@@ -20,25 +20,28 @@
       
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li class="nav-item">
+          <li class="nav-item d-lg-none">
             <router-link class="nav-link" to="/admin">Dashboard</router-link>
           </li>
-          <li class="nav-item">
+          <li class="nav-item d-lg-none">
             <router-link class="nav-link" to="/admin/subjects">Subjects</router-link>
           </li>
-          <li class="nav-item">
+          <li class="nav-item d-lg-none">
             <router-link class="nav-link" to="/admin/users">Users</router-link>
+          </li>
+          <li class="nav-item d-lg-none">
+            <router-link class="nav-link" to="/admin/email-tasks">Email Tasks</router-link>
           </li>
         </ul>
         
         <div class="d-flex align-items-center">
-          <span class="text-light me-3">
+          <span class="text-light me-3 d-none d-sm-inline-block">
             <i class="bi bi-person-circle me-1"></i>
             Admin
           </span>
           <button @click="logout" class="btn btn-outline-light btn-sm">
             <i class="bi bi-box-arrow-right me-1"></i>
-            Logout
+            <span class="d-none d-sm-inline">Logout</span>
           </button>
         </div>
       </div>
@@ -53,15 +56,29 @@ import { useAuth } from '@/composables/useAuth'
 const router = useRouter()
 const { logout: authLogout } = useAuth()
 
+const props = defineProps({
+  sidebarOpen: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const emit = defineEmits(['toggle-sidebar'])
+
 const logout = async () => {
   await authLogout()
   router.push('/login')
+}
+
+const toggleSidebar = () => {
+  emit('toggle-sidebar')
 }
 </script>
 
 <style scoped>
 .navbar {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1031;
 }
 
 .navbar-brand {
@@ -74,7 +91,7 @@ const logout = async () => {
 }
 
 .nav-link:hover {
-  color: #5b21b6;
+  color: #8b5cf6;
 }
 
 .nav-link.router-link-active {
