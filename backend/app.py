@@ -1,9 +1,17 @@
 from flask import Flask
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
-from controllers.extensions import db, cache
+from controllers.extensions import db, init_cache
 from dotenv import load_dotenv
 import os
+import logging
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app, resources={
@@ -21,13 +29,18 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = os.getenv('SQLALCHEMY_TRACK_MODIF
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 
-# Configure Flask-Caching
-app.config['CACHE_TYPE'] = 'simple'  # Using simple cache instead of Redis for now
+# Configure Flask-Caching with Redis or fallback
+app.config['CACHE_TYPE'] = os.getenv('CACHE_TYPE', 'redis')
+app.config['REDIS_HOST'] = os.getenv('REDIS_HOST', 'localhost')
+app.config['REDIS_PORT'] = int(os.getenv('REDIS_PORT', 6379))
+app.config['REDIS_DB'] = int(os.getenv('REDIS_DB', 0))
+app.config['CACHE_REDIS_DB'] = int(os.getenv('CACHE_REDIS_DB', 0))
 app.config['CACHE_DEFAULT_TIMEOUT'] = int(os.getenv('CACHE_TIMEOUT', 300))
 
 # Initialize extensions
 db.init_app(app)
-cache.init_app(app)
+# Initialize cache with enhanced setup
+cache = init_cache(app)
 jwt = JWTManager(app)
 
 # Initialize Celery
@@ -66,11 +79,31 @@ app.register_blueprint(exports_bp, url_prefix='/api/exports')  # New export rout
 
 # Create a route to test cache
 @app.route('/api/test-cache')
-@cache.cached(timeout=60)
 def test_cache():
-    import time
-    time.sleep(2)
-    return {'message': 'Cache test successful', 'time': time.time()}
+    from controllers.extensions import cache
+    
+    @cache.cached(timeout=60)
+    def _test_cache():
+        import time
+        time.sleep(2)
+        return {'message': 'Cache test successful', 'time': time.time(), 'redis_available': hasattr(cache, 'redis') and cache.redis is not None}
+    
+    return _test_cache()
+
+@app.route('/api/redis-status')
+def redis_status():
+    from controllers.extensions import redis_client
+    
+    if redis_client is None:
+        return {'status': 'unavailable', 'message': 'Redis client not initialized'}
+    
+    try:
+        if redis_client.ping():
+            return {'status': 'connected', 'message': 'Redis connection is active'}
+    except Exception as e:
+        return {'status': 'error', 'message': f'Error connecting to Redis: {str(e)}'}
+    
+    return {'status': 'unknown', 'message': 'Could not determine Redis status'}
 
 if __name__ == '__main__':
     app.run(debug=True)

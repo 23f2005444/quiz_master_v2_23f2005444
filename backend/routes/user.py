@@ -5,13 +5,16 @@ from controllers.models import Subject, Chapter, Quiz, Question, User, QuizAttem
 from controllers.extensions import db, cache
 from datetime import datetime
 from sqlalchemy.orm.exc import NoResultFound
+from utils.decorators import cached, rate_limit
 
 user_bp = Blueprint('user', __name__)
 
 @user_bp.route('/dashboard', methods=['GET'])
 @jwt_required()
+@cached(timeout=60, user_specific=True, key_prefix='user_dashboard')
+@rate_limit(limit=30, per=60, by="user")
 def user_dashboard():
-    """Get stats for user dashboard"""
+    """Get stats for user dashboard with caching"""
     try:
         user_id = get_jwt_identity()
         
